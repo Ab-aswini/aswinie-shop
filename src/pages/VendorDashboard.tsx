@@ -1,26 +1,49 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   Package, 
   ImagePlus, 
   Eye, 
   Star, 
-  Share2, 
-  TrendingUp,
+  Share2,
   ChevronRight,
   Sparkles,
-  BarChart3
+  BarChart3,
+  AlertCircle,
+  CheckCircle,
+  Loader2
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCurrentVendor } from "@/hooks/useCurrentVendor";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
 
 const VendorDashboard = () => {
-  // Mock vendor data
-  const vendor = {
-    name: "Verma's Boutique",
-    totalProducts: 12,
-    totalViews: 1247,
-    avgRating: 4.8,
-    pendingRatings: 3,
-  };
+  const navigate = useNavigate();
+  const { user, loading: authLoading, isVendor } = useAuth();
+  const { data: vendor, isLoading: vendorLoading, error } = useCurrentVendor();
+  const { toast } = useToast();
+
+  // Redirect if not authenticated or not a vendor
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth", { replace: true });
+      return;
+    }
+    
+    if (!authLoading && user && !vendorLoading && !vendor && !isVendor) {
+      toast({
+        title: "Register as Vendor",
+        description: "You need to register your business first.",
+      });
+      navigate("/vendor/register", { replace: true });
+    }
+  }, [authLoading, user, vendorLoading, vendor, isVendor, navigate, toast]);
+
+  const isLoading = authLoading || vendorLoading;
 
   const quickActions = [
     {
@@ -40,18 +63,59 @@ const VendorDashboard = () => {
   ];
 
   const stats = [
-    { icon: Package, label: "Products", value: vendor.totalProducts },
-    { icon: Eye, label: "Views", value: vendor.totalViews },
-    { icon: Star, label: "Rating", value: vendor.avgRating.toFixed(1) },
+    { icon: Package, label: "Products", value: vendor?.totalProducts ?? 0 },
+    { icon: Eye, label: "Views (30d)", value: vendor?.totalViews ?? 0 },
+    { icon: Star, label: "Rating", value: vendor?.avgRating ? vendor.avgRating.toFixed(1) : "N/A" },
   ];
 
   const menuItems = [
-    { icon: Package, label: "My Products", path: "/vendor/products", count: vendor.totalProducts },
+    { icon: Package, label: "My Products", path: "/vendor/products", count: vendor?.totalProducts },
     { icon: BarChart3, label: "Analytics", path: "/vendor/analytics" },
-    { icon: Eye, label: "Portfolio Preview", path: "/vendor/portfolio" },
-    { icon: Star, label: "Ratings Received", path: "/vendor/ratings", count: vendor.pendingRatings },
-    { icon: Share2, label: "Share Shop Link", path: "/vendor/share" },
+    { icon: Eye, label: "Portfolio Preview", path: `/shop/${vendor?.id}` },
+    { icon: Star, label: "Ratings Received", path: "/vendor/ratings", count: vendor?.reviewCount },
+    { icon: Share2, label: "Share Shop Link", path: `/shop/${vendor?.id}`, external: true },
   ];
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="px-4 py-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <Skeleton className="h-6 w-40 mb-2" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-xl" />
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {[...Array(2)].map((_, i) => (
+              <Skeleton key={i} className="h-32 rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppLayout>
+        <div className="px-4 py-6">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              Failed to load vendor data. Please try again.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -60,7 +124,7 @@ const VendorDashboard = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold">Business Dashboard</h1>
-            <p className="text-sm text-muted-foreground">{vendor.name}</p>
+            <p className="text-sm text-muted-foreground">{vendor?.business_name || "Your Business"}</p>
           </div>
           <Link
             to="/profile"
@@ -69,6 +133,27 @@ const VendorDashboard = () => {
             Consumer Mode
           </Link>
         </div>
+
+        {/* Approval Status */}
+        {vendor && !vendor.isApproved && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Pending Approval</AlertTitle>
+            <AlertDescription>
+              Your shop is under review. You'll be notified once approved.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {vendor?.isVerified && (
+          <Alert className="border-emerald-500/50 bg-emerald-500/10">
+            <CheckCircle className="h-4 w-4 text-emerald-500" />
+            <AlertTitle className="text-emerald-500">Verified Business</AlertTitle>
+            <AlertDescription>
+              Your business is verified and trusted.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
@@ -110,7 +195,10 @@ const VendorDashboard = () => {
         </div>
 
         {/* AI Studio Highlight */}
-        <div className="p-4 rounded-xl bg-gradient-to-r from-accent/20 to-accent/10 border border-accent/20">
+        <Link 
+          to="/vendor/ai-studio"
+          className="block p-4 rounded-xl bg-gradient-to-r from-accent/20 to-accent/10 border border-accent/20 hover:from-accent/30 hover:to-accent/20 transition-colors"
+        >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-accent" />
@@ -123,19 +211,20 @@ const VendorDashboard = () => {
             </div>
             <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </div>
-        </div>
+        </Link>
 
         {/* Menu */}
         <div className="space-y-2">
-          {menuItems.map(({ icon: Icon, label, path, count }) => (
+          {menuItems.map(({ icon: Icon, label, path, count, external }) => (
             <Link
-              key={path}
+              key={label}
               to={path}
+              target={external ? "_blank" : undefined}
               className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border/50 hover:bg-muted/50 transition-colors"
             >
               <Icon className="w-5 h-5 text-muted-foreground" />
               <span className="flex-1 font-medium">{label}</span>
-              {count !== undefined && (
+              {count !== undefined && count > 0 && (
                 <span className="px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
                   {count}
                 </span>
