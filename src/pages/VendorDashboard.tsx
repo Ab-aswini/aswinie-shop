@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Package, 
@@ -20,12 +20,18 @@ import { useCurrentVendor } from "@/hooks/useCurrentVendor";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { VendorOnboardingChecklist } from "@/components/vendor/VendorOnboardingChecklist";
+import { useProducts } from "@/hooks/useProducts";
 
 const VendorDashboard = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, isVendor } = useAuth();
   const { data: vendor, isLoading: vendorLoading, error } = useCurrentVendor();
   const { toast } = useToast();
+  const [showChecklist, setShowChecklist] = useState(true);
+  
+  // Get vendor products for onboarding checklist
+  const { data: vendorProducts = [] } = useProducts(vendor?.id);
 
   // Redirect if not authenticated or not a vendor
   useEffect(() => {
@@ -153,6 +159,25 @@ const VendorDashboard = () => {
               Your business is verified and trusted.
             </AlertDescription>
           </Alert>
+        )}
+
+        {/* Onboarding Checklist */}
+        {vendor && showChecklist && (
+          <VendorOnboardingChecklist
+            vendor={{
+              id: vendor.id,
+              business_name: vendor.business_name,
+              description: vendor.description,
+              logo_url: vendor.logo_url,
+              shop_image_url: vendor.shop_image_url,
+              location: vendor.location,
+              gst_number: vendor.gst_number,
+              udyam_number: vendor.udyam_number,
+              is_approved: vendor.isApproved || false,
+            }}
+            products={vendorProducts}
+            onDismiss={() => setShowChecklist(false)}
+          />
         )}
 
         {/* Stats */}

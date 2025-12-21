@@ -6,6 +6,12 @@ interface VendorStats {
   id: string;
   business_name: string;
   slug: string;
+  description: string | null;
+  logo_url: string | null;
+  shop_image_url: string | null;
+  location: string | null;
+  gst_number: string | null;
+  udyam_number: string | null;
   totalProducts: number;
   totalViews: number;
   avgRating: number;
@@ -25,7 +31,7 @@ export function useCurrentVendor() {
       // Get vendor profile
       const { data: vendor, error: vendorError } = await supabase
         .from('vendors')
-        .select('id, business_name, slug, is_approved, is_verified')
+        .select('id, business_name, slug, description, logo_url, shop_image_url, location, gst_number, udyam_number, is_approved, is_verified')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -65,6 +71,12 @@ export function useCurrentVendor() {
         id: vendor.id,
         business_name: vendor.business_name,
         slug: vendor.slug,
+        description: vendor.description,
+        logo_url: vendor.logo_url,
+        shop_image_url: vendor.shop_image_url,
+        location: vendor.location,
+        gst_number: vendor.gst_number,
+        udyam_number: vendor.udyam_number,
         totalProducts: productCount || 0,
         totalViews: viewCount || 0,
         avgRating: avgRating,

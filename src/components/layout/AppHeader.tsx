@@ -1,6 +1,7 @@
-import { Bell, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
 
 interface AppHeaderProps {
   title?: string;
@@ -8,7 +9,7 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ title = "uShop", showNotifications = true }: AppHeaderProps) {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-xl border-b border-border/50">
@@ -29,10 +30,8 @@ export function AppHeader({ title = "uShop", showNotifications = true }: AppHead
           <span className="text-xl font-bold text-primary">Shop</span>
         </Link>
         
-        {showNotifications ? (
-          <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted/50 transition-colors">
-            <Bell className="w-5 h-5 text-muted-foreground" />
-          </button>
+        {showNotifications && user ? (
+          <NotificationsDropdown />
         ) : (
           <div className="w-10" />
         )}
