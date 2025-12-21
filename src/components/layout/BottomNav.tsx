@@ -1,7 +1,8 @@
-import { Home, Compass, Search, Heart, User } from "lucide-react";
+import { Home, Compass, Search, Heart, User, Shield } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
-const navItems = [
+const baseNavItems = [
   { icon: Home, label: "Home", path: "/" },
   { icon: Compass, label: "Local Gems", path: "/explore" },
   { icon: Search, label: "Search", path: "/search" },
@@ -11,12 +12,18 @@ const navItems = [
 
 export function BottomNav() {
   const location = useLocation();
+  const { isAdmin } = useAuth();
+
+  const navItems = isAdmin
+    ? [...baseNavItems.slice(0, 4), { icon: Shield, label: "Admin", path: "/admin" }]
+    : baseNavItems;
 
   return (
     <nav className="bottom-nav">
       <div className="flex items-center justify-around max-w-lg mx-auto">
         {navItems.map(({ icon: Icon, label, path }) => {
-          const isActive = location.pathname === path;
+          const isActive = location.pathname === path || 
+            (path === "/admin" && location.pathname.startsWith("/admin"));
           return (
             <Link
               key={path}

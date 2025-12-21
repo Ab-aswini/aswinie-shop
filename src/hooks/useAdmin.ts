@@ -12,10 +12,17 @@ interface AdminStats {
 interface PendingVendor {
   id: string;
   business_name: string;
-  category: { name: string } | null;
-  created_at: string;
+  description: string | null;
   whatsapp_number: string;
   city: string | null;
+  location: string | null;
+  gst_number: string | null;
+  udyam_number: string | null;
+  years_active: number | null;
+  logo_url: string | null;
+  shop_image_url: string | null;
+  created_at: string;
+  category: { name: string } | null;
 }
 
 interface Report {
@@ -75,7 +82,7 @@ export function usePendingVendors() {
     queryFn: async (): Promise<PendingVendor[]> => {
       const { data, error } = await supabase
         .from('vendors')
-        .select('id, business_name, category:categories(name), created_at, whatsapp_number, city')
+        .select('id, business_name, description, category:categories(name), created_at, whatsapp_number, city, location, gst_number, udyam_number, years_active, logo_url, shop_image_url')
         .eq('is_approved', false)
         .order('created_at', { ascending: false })
         .limit(20);
