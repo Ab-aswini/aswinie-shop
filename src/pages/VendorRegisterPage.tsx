@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCategoriesHierarchy } from "@/hooks/useCategories";
+import { useCurrentVendor } from "@/hooks/useCurrentVendor";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ export default function VendorRegisterPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const { data: categoriesHierarchy } = useCategoriesHierarchy();
+  const { data: currentVendor, isLoading: isLoadingVendor } = useCurrentVendor();
   const { toast } = useToast();
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -44,6 +46,17 @@ export default function VendorRegisterPage() {
       navigate("/auth");
     }
   }, [user, loading, navigate]);
+
+  // Redirect if user already has a vendor profile
+  useEffect(() => {
+    if (!isLoadingVendor && currentVendor) {
+      toast({
+        title: "Already registered",
+        description: "You already have a vendor account.",
+      });
+      navigate("/vendor/dashboard");
+    }
+  }, [currentVendor, isLoadingVendor, navigate, toast]);
 
   const generateSlug = (name: string) => {
     return name
