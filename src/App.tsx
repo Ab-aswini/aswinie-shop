@@ -20,7 +20,9 @@ import VendorDashboard from "./pages/VendorDashboard";
 import VendorRegisterPage from "./pages/VendorRegisterPage";
 import AIStudioPage from "./pages/AIStudioPage";
 import ProductCreatePage from "./pages/ProductCreatePage";
+import ProductEditPage from "./pages/ProductEditPage";
 import VendorProductsPage from "./pages/VendorProductsPage";
+import VendorRatingsPage from "./pages/VendorRatingsPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import VendorPortfolioPage from "./pages/VendorPortfolioPage";
 
@@ -57,7 +59,9 @@ const App = () => (
             <Route path="/vendor/dashboard" element={<VendorDashboard />} />
             <Route path="/vendor/ai-studio" element={<AIStudioPage />} />
             <Route path="/vendor/product/new" element={<ProductCreatePage />} />
+            <Route path="/vendor/product/:productId/edit" element={<ProductEditPage />} />
             <Route path="/vendor/products" element={<VendorProductsPage />} />
+            <Route path="/vendor/ratings" element={<VendorRatingsPage />} />
             <Route path="/vendor/portfolio" element={<VendorPortfolioPage />} />
             
             {/* Admin Routes */}
