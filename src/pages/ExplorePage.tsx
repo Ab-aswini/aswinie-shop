@@ -59,10 +59,10 @@ const ExplorePage = () => {
 
   return (
     <AppLayout headerTitle="Local Gems">
-      <div className="flex">
+      <div className="flex min-h-[calc(100vh-8rem)]">
         {/* Desktop Sidebar Filter */}
         {!isMobile && (
-          <aside className="hidden md:block w-72 shrink-0 p-4 border-r border-border min-h-[calc(100vh-4rem)]">
+          <aside className="hidden md:block w-72 shrink-0 p-4 border-r border-border min-h-full bg-background">
             <CategoryFilter
               selectedCategory={selectedCategory}
               onSelectCategory={handleCategorySelect}
@@ -72,150 +72,154 @@ const ExplorePage = () => {
         )}
 
         {/* Main Content */}
-        <div className="flex-1 px-4 py-4 space-y-4">
-          {/* Header with filter and sort */}
-          <div className="flex items-center justify-between gap-2">
-            <h1 className="text-xl font-bold">Explore Local Shops</h1>
-            
-            <div className="flex items-center gap-2">
-              {/* Sort Dropdown */}
-              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                <SelectTrigger className="w-[130px] h-9">
-                  <div className="flex items-center gap-2">
-                    {getSortIcon()}
-                    <SelectValue />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      Newest
+        <div className="flex-1 w-full max-w-full overflow-hidden">
+          <div className="px-4 py-4 space-y-4">
+            {/* Header with filter and sort */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-bold shrink-0">Explore Local Shops</h1>
+              
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Sort Dropdown */}
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                  <SelectTrigger className="w-[120px] sm:w-[130px] h-9 text-sm">
+                    <div className="flex items-center gap-1.5">
+                      {getSortIcon()}
+                      <SelectValue />
                     </div>
-                  </SelectItem>
-                  <SelectItem value="rating">
-                    <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4" />
-                      Top Rated
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="popular">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4" />
-                      Popular
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="newest">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Newest
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="rating">
+                      <div className="flex items-center gap-2">
+                        <Star className="w-4 h-4" />
+                        Top Rated
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="popular">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4" />
+                        Popular
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
 
-              {/* Mobile Filter Button */}
-              {isMobile && (
-                <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" size="icon" className="relative h-9 w-9">
-                      <Filter className="w-4 h-4" />
-                      {selectedCategory !== 'all' && (
-                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full" />
-                      )}
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="right" className="w-[85vw] max-w-sm p-0">
-                    <SheetHeader className="p-4 border-b border-border">
-                      <SheetTitle className="flex items-center justify-between">
-                        Filter by Category
+                {/* Mobile Filter Button */}
+                {isMobile && (
+                  <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                    <SheetTrigger asChild>
+                      <Button variant="outline" size="icon" className="relative h-9 w-9 shrink-0">
+                        <Filter className="w-4 h-4" />
                         {selectedCategory !== 'all' && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleCategorySelect('all')}
-                            className="text-xs"
-                          >
-                            Clear
-                          </Button>
+                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full" />
                         )}
-                      </SheetTitle>
-                    </SheetHeader>
-                    <div className="p-4 overflow-y-auto max-h-[calc(100vh-80px)]">
-                      <CategoryFilter
-                        selectedCategory={selectedCategory}
-                        onSelectCategory={handleCategorySelect}
-                        type="product"
-                        showCard={false}
-                      />
-                    </div>
-                  </SheetContent>
-                </Sheet>
-              )}
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="right" className="w-[85vw] max-w-sm p-0">
+                      <SheetHeader className="p-4 border-b border-border">
+                        <SheetTitle className="flex items-center justify-between">
+                          Filter by Category
+                          {selectedCategory !== 'all' && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleCategorySelect('all')}
+                              className="text-xs"
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </SheetTitle>
+                      </SheetHeader>
+                      <div className="p-4 overflow-y-auto max-h-[calc(100vh-80px)]">
+                        <CategoryFilter
+                          selectedCategory={selectedCategory}
+                          onSelectCategory={handleCategorySelect}
+                          type="product"
+                          showCard={false}
+                        />
+                      </div>
+                    </SheetContent>
+                  </Sheet>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Mobile Category Slider */}
-          {isMobile && (
-            <CategorySlider
-              selected={selectedCategory}
-              onSelect={handleCategorySelect}
-              type="product"
-            />
-          )}
-
-          {/* Results count with active filter indicator */}
-          <div className="flex items-center flex-wrap gap-2">
-            <p className="text-sm text-muted-foreground">
-              {filteredAndSortedShops.length} shops found
-            </p>
-            {selectedCategory !== 'all' && (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="h-6 text-xs gap-1 rounded-full"
-                onClick={() => setSelectedCategory('all')}
-              >
-                {selectedCategory.replace(/-/g, ' ')}
-                <X className="w-3 h-3" />
-              </Button>
-            )}
-          </div>
-
-          {/* Shop grid */}
-          {isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="aspect-[4/3] rounded-xl" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-              ))}
-            </div>
-          ) : filteredAndSortedShops.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {filteredAndSortedShops.map((shop) => (
-                <ShopCard
-                  key={shop.id}
-                  id={shop.id}
-                  name={shop.business_name}
-                  image={shop.shop_image_url || "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&h=300&fit=crop"}
-                  rating={shop.avg_rating || 4.5}
-                  category={shop.category?.name || "Shop"}
-                  location={shop.city || undefined}
+            {/* Mobile Category Slider */}
+            {isMobile && (
+              <div className="-mx-4 px-4 overflow-x-auto">
+                <CategorySlider
+                  selected={selectedCategory}
+                  onSelect={handleCategorySelect}
+                  type="product"
                 />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <StoreIcon className="w-12 h-12 mx-auto mb-2 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">No shops found in this category</p>
+              </div>
+            )}
+
+            {/* Results count with active filter indicator */}
+            <div className="flex items-center flex-wrap gap-2">
+              <p className="text-sm text-muted-foreground">
+                {filteredAndSortedShops.length} shops found
+              </p>
               {selectedCategory !== 'all' && (
-                <Button 
-                  variant="link" 
-                  className="mt-2"
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-6 text-xs gap-1 rounded-full"
                   onClick={() => setSelectedCategory('all')}
                 >
-                  View all shops
+                  {selectedCategory.replace(/-/g, ' ')}
+                  <X className="w-3 h-3" />
                 </Button>
               )}
             </div>
-          )}
+
+            {/* Shop grid - uniform height cards */}
+            {isLoading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="aspect-[4/3] rounded-xl" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                ))}
+              </div>
+            ) : filteredAndSortedShops.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                {filteredAndSortedShops.map((shop) => (
+                  <ShopCard
+                    key={shop.id}
+                    id={shop.id}
+                    name={shop.business_name}
+                    image={shop.shop_image_url || "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&h=300&fit=crop"}
+                    rating={shop.avg_rating || 4.5}
+                    category={shop.category?.name || "Shop"}
+                    location={shop.city || undefined}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <StoreIcon className="w-12 h-12 mx-auto mb-2 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">No shops found in this category</p>
+                {selectedCategory !== 'all' && (
+                  <Button 
+                    variant="link" 
+                    className="mt-2"
+                    onClick={() => setSelectedCategory('all')}
+                  >
+                    View all shops
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </AppLayout>
