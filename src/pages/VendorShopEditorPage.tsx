@@ -13,7 +13,8 @@ import {
   FileText,
   Phone,
   Upload,
-  X
+  X,
+  Crop
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ import { useCurrentVendor } from "@/hooks/useCurrentVendor";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImageCropper } from "@/components/ui/ImageCropper";
 
 const shopEditorSchema = z.object({
   business_name: z.string().min(2, "Business name must be at least 2 characters"),
@@ -58,6 +60,11 @@ const VendorShopEditorPage = () => {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  
+  // Cropper states
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [cropperType, setCropperType] = useState<'logo' | 'cover'>('logo');
+  const [cropperImage, setCropperImage] = useState<string>('');
 
   const form = useForm<ShopEditorFormValues>({
     resolver: zodResolver(shopEditorSchema),
@@ -78,14 +85,13 @@ const VendorShopEditorPage = () => {
         business_name: vendor.business_name || "",
         description: vendor.description || "",
         location: vendor.location || "",
-        whatsapp_number: "", // Will be fetched separately
+        whatsapp_number: "",
         gst_number: vendor.gst_number || "",
         udyam_number: vendor.udyam_number || "",
       });
       setLogoPreview(vendor.logo_url);
       setCoverPreview(vendor.shop_image_url);
       
-      // Fetch whatsapp number separately
       fetchWhatsappNumber();
     }
   }, [vendor]);
@@ -108,35 +114,45 @@ const VendorShopEditorPage = () => {
     }
   }, [authLoading, user, navigate]);
 
-  const handleFileChange = (
+  const handleFileSelect = (
     e: React.ChangeEvent<HTMLInputElement>,
     type: 'logo' | 'cover'
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       toast({
         title: "File too large",
-        description: "Please select an image under 5MB",
+        description: "Please select an image under 10MB",
         variant: "destructive",
       });
       return;
     }
 
-    // Create preview
     const reader = new FileReader();
     reader.onload = (e) => {
-      if (type === 'logo') {
-        setLogoPreview(e.target?.result as string);
-        setLogoFile(file);
-      } else {
-        setCoverPreview(e.target?.result as string);
-        setCoverFile(file);
-      }
+      setCropperImage(e.target?.result as string);
+      setCropperType(type);
+      setCropperOpen(true);
     };
     reader.readAsDataURL(file);
+    
+    // Reset input so same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleCropComplete = (croppedBlob: Blob) => {
+    const file = new File([croppedBlob], `${cropperType}-${Date.now()}.jpg`, { type: 'image/jpeg' });
+    const previewUrl = URL.createObjectURL(croppedBlob);
+    
+    if (cropperType === 'logo') {
+      setLogoFile(file);
+      setLogoPreview(previewUrl);
+    } else {
+      setCoverFile(file);
+      setCoverPreview(previewUrl);
+    }
   };
 
   const uploadImage = async (file: File, path: string): Promise<string | null> => {
@@ -167,19 +183,16 @@ const VendorShopEditorPage = () => {
       let logoUrl = vendor.logo_url;
       let shopImageUrl = vendor.shop_image_url;
 
-      // Upload logo if changed
       if (logoFile) {
         const url = await uploadImage(logoFile, `logos/${vendor.id}`);
         if (url) logoUrl = url;
       }
 
-      // Upload cover if changed
       if (coverFile) {
         const url = await uploadImage(coverFile, `covers/${vendor.id}`);
         if (url) shopImageUrl = url;
       }
 
-      // Update vendor
       const { error } = await supabase
         .from('vendors')
         .update({
@@ -202,7 +215,6 @@ const VendorShopEditorPage = () => {
         description: "Your shop details have been saved.",
       });
 
-      // Refresh vendor data
       queryClient.invalidateQueries({ queryKey: ['current-vendor'] });
       refetch();
       
@@ -269,7 +281,10 @@ const VendorShopEditorPage = () => {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Cover Image */}
               <div className="space-y-2">
-                <Label>Cover Image</Label>
+                <Label className="flex items-center gap-2">
+                  <Crop className="w-4 h-4" />
+                  Cover Image (16:9)
+                </Label>
                 <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-muted border-2 border-dashed border-border">
                   {coverPreview ? (
                     <>
@@ -278,26 +293,37 @@ const VendorShopEditorPage = () => {
                         alt="Cover"
                         className="w-full h-full object-cover"
                       />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCoverPreview(null);
-                          setCoverFile(null);
-                        }}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 hover:bg-background"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                      <div className="absolute top-2 right-2 flex gap-1">
+                        <label className="p-1.5 rounded-full bg-background/80 hover:bg-background cursor-pointer">
+                          <Crop className="w-4 h-4" />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleFileSelect(e, 'cover')}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCoverPreview(null);
+                            setCoverFile(null);
+                          }}
+                          className="p-1.5 rounded-full bg-background/80 hover:bg-background"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
                     </>
                   ) : (
                     <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-muted/80 transition-colors">
                       <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                      <span className="text-sm text-muted-foreground">Upload cover image</span>
+                      <span className="text-sm text-muted-foreground">Upload & crop cover image</span>
                       <input
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => handleFileChange(e, 'cover')}
+                        onChange={(e) => handleFileSelect(e, 'cover')}
                       />
                     </label>
                   )}
@@ -306,7 +332,10 @@ const VendorShopEditorPage = () => {
 
               {/* Logo */}
               <div className="space-y-2">
-                <Label>Shop Logo</Label>
+                <Label className="flex items-center gap-2">
+                  <Crop className="w-4 h-4" />
+                  Shop Logo (Square)
+                </Label>
                 <div className="flex items-center gap-4">
                   <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-muted border-2 border-dashed border-border">
                     {logoPreview ? (
@@ -316,16 +345,27 @@ const VendorShopEditorPage = () => {
                           alt="Logo"
                           className="w-full h-full object-cover"
                         />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setLogoPreview(null);
-                            setLogoFile(null);
-                          }}
-                          className="absolute top-1 right-1 p-1 rounded-full bg-background/80 hover:bg-background"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
+                        <div className="absolute top-1 right-1 flex gap-0.5">
+                          <label className="p-1 rounded-full bg-background/80 hover:bg-background cursor-pointer">
+                            <Crop className="w-3 h-3" />
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleFileSelect(e, 'logo')}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLogoPreview(null);
+                              setLogoFile(null);
+                            }}
+                            className="p-1 rounded-full bg-background/80 hover:bg-background"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-muted/80 transition-colors">
@@ -334,7 +374,7 @@ const VendorShopEditorPage = () => {
                           type="file"
                           accept="image/*"
                           className="hidden"
-                          onChange={(e) => handleFileChange(e, 'logo')}
+                          onChange={(e) => handleFileSelect(e, 'logo')}
                         />
                       </label>
                     )}
@@ -342,7 +382,7 @@ const VendorShopEditorPage = () => {
                   <div className="flex-1">
                     <p className="text-sm font-medium">Shop Logo</p>
                     <p className="text-xs text-muted-foreground">
-                      Square image, max 5MB
+                      Square image, auto-cropped
                     </p>
                   </div>
                 </div>
@@ -479,6 +519,15 @@ const VendorShopEditorPage = () => {
             </form>
           </Form>
         </div>
+
+        {/* Image Cropper Modal */}
+        <ImageCropper
+          open={cropperOpen}
+          onOpenChange={setCropperOpen}
+          imageSrc={cropperImage}
+          aspectRatio={cropperType === 'logo' ? 1 : 16/9}
+          onCropComplete={handleCropComplete}
+        />
       </div>
     </AppLayout>
   );
