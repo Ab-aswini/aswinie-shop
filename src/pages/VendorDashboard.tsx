@@ -12,7 +12,8 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
-  Edit
+  Edit,
+  LogOut
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -26,7 +27,7 @@ import { useProducts } from "@/hooks/useProducts";
 
 const VendorDashboard = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading, isVendor } = useAuth();
+  const { user, loading: authLoading, isVendor, signOut } = useAuth();
   const { data: vendor, isLoading: vendorLoading, error } = useCurrentVendor();
   const { toast } = useToast();
   const [showChecklist, setShowChecklist] = useState(true);
@@ -260,6 +261,23 @@ const VendorDashboard = () => {
             </Link>
           ))}
         </div>
+
+        {/* Logout Button */}
+        <button 
+          onClick={async () => {
+            try {
+              await signOut();
+              toast({ title: "Logged out", description: "See you soon!" });
+              navigate("/");
+            } catch (error: any) {
+              toast({ title: "Error", description: error.message, variant: "destructive" });
+            }
+          }}
+          className="flex items-center gap-3 w-full p-4 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="font-medium">Log Out</span>
+        </button>
       </div>
     </AppLayout>
   );
