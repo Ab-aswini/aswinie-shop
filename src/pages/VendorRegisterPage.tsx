@@ -1,23 +1,24 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCategories } from "@/hooks/useCategories";
+import { useCategoriesHierarchy } from "@/hooks/useCategories";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Store, Phone, MapPin, FileText, ArrowLeft, Upload, CheckCircle } from "lucide-react";
+import { Store, Phone, MapPin, FileText, ArrowLeft, Upload, CheckCircle, Sparkles, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 
 export default function VendorRegisterPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const { data: categories } = useCategories();
+  const { data: categoriesHierarchy } = useCategoriesHierarchy();
   const { toast } = useToast();
+  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(1);
@@ -212,18 +213,64 @@ export default function VendorRegisterPage() {
                     <SelectTrigger>
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {categories?.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </SelectItem>
+                    <SelectContent className="max-h-64">
+                      {categoriesHierarchy?.map((parent) => (
+                        <SelectGroup key={parent.id}>
+                          <SelectLabel className="text-primary font-semibold">
+                            {parent.icon} {parent.name}
+                          </SelectLabel>
+                          {parent.children?.map((sub) => (
+                            <SelectItem key={sub.id} value={sub.id} className="pl-6">
+                              {sub.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="description">Description</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-primary"
+                      disabled={!formData.businessName || isGeneratingDesc}
+                      onClick={async () => {
+                        if (!formData.businessName) return;
+                        setIsGeneratingDesc(true);
+                        try {
+                          const selectedCat = categoriesHierarchy?.flatMap(p => p.children || []).find(c => c.id === formData.categoryId);
+                          const { data, error } = await supabase.functions.invoke('ai-assist', {
+                            body: {
+                              type: 'suggest-description',
+                              businessName: formData.businessName,
+                              category: selectedCat?.name || 'general',
+                            },
+                          });
+                          if (error) throw error;
+                          if (data?.response) {
+                            setFormData({ ...formData, description: data.response });
+                            toast({ title: "AI generated description!" });
+                          }
+                        } catch (e) {
+                          toast({ title: "Failed to generate", variant: "destructive" });
+                        } finally {
+                          setIsGeneratingDesc(false);
+                        }
+                      }}
+                    >
+                      {isGeneratingDesc ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3 h-3 mr-1" />
+                      )}
+                      AI Suggest
+                    </Button>
+                  </div>
                   <Textarea
                     id="description"
                     placeholder="Tell customers about your shop, what you sell, and what makes you special..."

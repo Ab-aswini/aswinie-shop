@@ -1,8 +1,9 @@
 import { useState, useRef } from "react";
-import { ArrowLeft, Upload, Camera, Sparkles, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload, Camera, Sparkles, Check, Loader2, Wand2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const styleOptions = [
   { id: "clean", label: "Clean", description: "White background" },
@@ -11,6 +12,14 @@ const styleOptions = [
   { id: "lifestyle", label: "Lifestyle", description: "In context" },
 ];
 
+interface AIProductData {
+  productName: string;
+  description: string;
+  highlights: string[];
+  priceRange: { min: number; max: number };
+  style: string;
+}
+
 const AIStudioPage = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -18,7 +27,7 @@ const AIStudioPage = () => {
   const [image, setImage] = useState<string | null>(null);
   const [selectedStyle, setSelectedStyle] = useState("clean");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [enhancedImage, setEnhancedImage] = useState<string | null>(null);
+  const [aiData, setAiData] = useState<AIProductData | null>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -26,7 +35,7 @@ const AIStudioPage = () => {
       const reader = new FileReader();
       reader.onload = (event) => {
         setImage(event.target?.result as string);
-        setEnhancedImage(null);
+        setAiData(null);
       };
       reader.readAsDataURL(file);
     }
@@ -36,21 +45,63 @@ const AIStudioPage = () => {
     if (!image) return;
 
     setIsProcessing(true);
-    
-    // Simulate AI processing
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-    
-    // In real app, this would call an AI endpoint
-    setEnhancedImage(image); // For demo, just use same image
-    setIsProcessing(false);
-    
-    toast({
-      title: "Image enhanced!",
-      description: "Your product photo is now studio-quality.",
-    });
+
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-assist', {
+        body: {
+          type: 'enhance-image',
+          imageBase64: image,
+          style: selectedStyle,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.response) {
+        // Parse the JSON response from AI
+        try {
+          const jsonMatch = data.response.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            setAiData(parsed);
+          }
+        } catch (parseError) {
+          console.error("Failed to parse AI response:", parseError);
+          // Still show success but with basic data
+          setAiData({
+            productName: "Product",
+            description: data.response,
+            highlights: [],
+            priceRange: { min: 0, max: 0 },
+            style: selectedStyle,
+          });
+        }
+      }
+
+      toast({
+        title: "Image analyzed!",
+        description: "AI has generated product details for you.",
+      });
+    } catch (error: any) {
+      console.error("AI enhance error:", error);
+      toast({
+        title: "Enhancement failed",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleSave = () => {
+    // Store AI data in session for product creation
+    if (aiData) {
+      sessionStorage.setItem('ai-product-data', JSON.stringify({
+        ...aiData,
+        imageUrl: image,
+      }));
+    }
     toast({
       title: "Photo saved!",
       description: "Continue to add product details.",
@@ -71,8 +122,11 @@ const AIStudioPage = () => {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex-1">
-              <h1 className="text-lg font-semibold">AI Studio</h1>
-              <p className="text-xs text-muted-foreground">Enhance product photos</p>
+              <h1 className="text-lg font-semibold flex items-center gap-2">
+                <Wand2 className="w-5 h-5 text-primary" />
+                AI Studio
+              </h1>
+              <p className="text-xs text-muted-foreground">Enhance product photos with AI</p>
             </div>
           </div>
         </div>
@@ -107,7 +161,7 @@ const AIStudioPage = () => {
               {/* Image preview */}
               <div className="relative aspect-square rounded-2xl overflow-hidden bg-muted">
                 <img
-                  src={enhancedImage || image}
+                  src={image}
                   alt="Product"
                   className="w-full h-full object-cover"
                 />
@@ -115,9 +169,9 @@ const AIStudioPage = () => {
                   <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
                     <Loader2 className="w-12 h-12 text-primary animate-spin" />
                     <div className="text-center">
-                      <p className="font-medium">Generating Studio Images...</p>
+                      <p className="font-medium">AI is analyzing your photo...</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        AI is enhancing your photo
+                        Generating product details
                       </p>
                     </div>
                     <div className="w-48 h-2 bg-muted rounded-full overflow-hidden">
@@ -125,10 +179,10 @@ const AIStudioPage = () => {
                     </div>
                   </div>
                 )}
-                {enhancedImage && !isProcessing && (
-                  <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-trust-verified/90 text-primary-foreground text-sm font-medium flex items-center gap-1.5">
+                {aiData && !isProcessing && (
+                  <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-sm font-medium flex items-center gap-1.5">
                     <Check className="w-4 h-4" />
-                    Enhanced
+                    Analyzed
                   </div>
                 )}
               </div>
@@ -151,8 +205,48 @@ const AIStudioPage = () => {
             </div>
           )}
 
+          {/* AI Generated Data */}
+          {aiData && (
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-3">
+              <h3 className="font-semibold text-primary flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                AI Generated Details
+              </h3>
+              <div className="space-y-2">
+                <div>
+                  <span className="text-xs text-muted-foreground">Product Name</span>
+                  <p className="font-medium">{aiData.productName}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Description</span>
+                  <p className="text-sm">{aiData.description}</p>
+                </div>
+                {aiData.highlights.length > 0 && (
+                  <div>
+                    <span className="text-xs text-muted-foreground">Highlights</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {aiData.highlights.map((h, i) => (
+                        <span key={i} className="px-2 py-0.5 bg-secondary text-xs rounded-full">
+                          {h}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {aiData.priceRange.max > 0 && (
+                  <div>
+                    <span className="text-xs text-muted-foreground">Suggested Price</span>
+                    <p className="font-medium text-primary">
+                      ₹{aiData.priceRange.min} - ₹{aiData.priceRange.max}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Style selector */}
-          {image && !enhancedImage && (
+          {image && !aiData && (
             <div>
               <h3 className="font-medium mb-3">Choose Style</h3>
               <div className="grid grid-cols-2 gap-2">
@@ -177,21 +271,21 @@ const AIStudioPage = () => {
           {/* Action buttons */}
           {image && (
             <div className="space-y-3">
-              {!enhancedImage ? (
+              {!aiData ? (
                 <button
                   onClick={handleEnhance}
                   disabled={isProcessing}
                   className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-semibold text-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                   <Sparkles className="w-5 h-5" />
-                  {isProcessing ? "Processing..." : "Enhance with AI"}
+                  {isProcessing ? "Analyzing..." : "Analyze with AI"}
                 </button>
               ) : (
                 <button
                   onClick={handleSave}
                   className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity"
                 >
-                  Use This Photo
+                  Use These Details
                 </button>
               )}
             </div>
@@ -202,9 +296,9 @@ const AIStudioPage = () => {
             <h4 className="font-medium mb-2">How AI Studio works</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
               <li>• Upload any product photo from your phone</li>
-              <li>• AI cleans the background automatically</li>
-              <li>• Lighting and colors are enhanced</li>
-              <li>• Get studio-quality images in seconds</li>
+              <li>• AI analyzes and suggests product name</li>
+              <li>• Get auto-generated description & highlights</li>
+              <li>• Suggested pricing based on market rates</li>
             </ul>
           </div>
         </div>
