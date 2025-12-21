@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 interface AIRequest {
-  type: 'enhance-image' | 'suggest-description' | 'suggest-category' | 'search-help' | 'rate-help' | 'enhance-product-image' | 'suggest-product-description';
+  type: 'enhance-image' | 'suggest-description' | 'suggest-category' | 'search-help' | 'rate-help' | 'enhance-product-image' | 'suggest-product-description' | 'enhance-product-photo';
   imageBase64?: string;
   style?: string;
   businessName?: string;
@@ -14,6 +14,7 @@ interface AIRequest {
   prompt?: string;
   searchQuery?: string;
   productName?: string;
+  enhancementType?: 'clean-background' | 'professional' | 'bright-lighting';
 }
 
 serve(async (req) => {
@@ -29,9 +30,78 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Handle image enhancement with image generation model
+    if (body.type === 'enhance-product-photo' && body.imageBase64) {
+      console.log("Enhancing product photo with AI...");
+      
+      const enhancementPrompts: Record<string, string> = {
+        'clean-background': 'Enhance this product photo: remove the background and replace with a clean white studio background, improve lighting and color vibrancy, keep the product exactly the same',
+        'professional': 'Enhance this product photo: make it look like a professional e-commerce product shot with clean background, improved lighting, sharper details, and vibrant colors',
+        'bright-lighting': 'Enhance this product photo: improve brightness and lighting, make colors more vibrant and appealing, add subtle shadows for depth, keep background clean'
+      };
+      
+      const enhancePrompt = enhancementPrompts[body.enhancementType || 'professional'];
+
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image-preview",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: enhancePrompt },
+                { type: "image_url", image_url: { url: body.imageBase64 } }
+              ]
+            }
+          ],
+          modalities: ["image", "text"]
+        }),
+      });
+
+      if (!response.ok) {
+        const status = response.status;
+        if (status === 429) {
+          return new Response(JSON.stringify({ error: "Too many requests. Wait a moment." }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (status === 402) {
+          return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        console.error("AI image enhancement error:", status, await response.text());
+        throw new Error("Image enhancement failed");
+      }
+
+      const data = await response.json();
+      console.log("Image enhancement response received");
+      
+      // Extract the enhanced image from the response
+      const enhancedImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      
+      if (!enhancedImageUrl) {
+        console.error("No image in response:", JSON.stringify(data).substring(0, 500));
+        throw new Error("No enhanced image returned");
+      }
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        enhancedImageUrl,
+        type: body.type 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let systemPrompt = "";
     let userPrompt = "";
-    let maxTokens = 150; // Default short response
+    let maxTokens = 150;
 
     switch (body.type) {
       case 'enhance-image':
