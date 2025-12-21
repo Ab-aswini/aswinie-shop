@@ -121,8 +121,8 @@ export function MultiImageUpload({
 
   return (
     <div className="space-y-3">
-      {/* Main Grid - Responsive with touch-friendly sizes */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+      {/* Main Grid - Larger cards with responsive sizing */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
         {/* Uploaded Images */}
         {images.map((image, index) => (
           <div
