@@ -2,95 +2,114 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* uShop Design System - Mobile-first local business discovery */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core brand colors - Trustworthy Blue */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary - Deep Blue */
+    --primary: 217 91% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary - Soft Blue */
+    --secondary: 214 95% 93%;
+    --secondary-foreground: 217 91% 40%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted - Light Gray Blue */
+    --muted: 214 32% 91%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent - Warm orange for highlights */
+    --accent: 32 95% 55%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* WhatsApp Green */
+    --whatsapp: 142 70% 45%;
+    --whatsapp-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Trust Badge Colors */
+    --trust-gold: 45 93% 47%;
+    --trust-silver: 220 13% 69%;
+    --trust-bronze: 30 41% 50%;
+    --trust-verified: 142 76% 36%;
 
-    --radius: 0.5rem;
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
+    /* Borders */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 50%;
+
+    --radius: 0.75rem;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.05);
+    --shadow-card: 0 2px 8px -2px hsl(222 47% 11% / 0.08), 0 4px 16px -4px hsl(222 47% 11% / 0.08);
+    --shadow-elevated: 0 8px 24px -4px hsl(222 47% 11% / 0.12), 0 16px 48px -8px hsl(222 47% 11% / 0.12);
+
+    /* Sidebar */
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-primary: 217 91% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 214 95% 93%;
+    --sidebar-accent-foreground: 217 91% 40%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 217 91% 50%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 222 47% 8%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 222 47% 11%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 8%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 217 32% 17%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 217 32% 17%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 32 95% 55%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
+    --whatsapp: 142 70% 45%;
+    --whatsapp-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 30%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
+    --border: 217 32% 17%;
+    --input: 217 32% 17%;
+    --ring: 217 91% 60%;
+
+    --sidebar-background: 222 47% 8%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent: 217 32% 17%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-border: 217 32% 17%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 
@@ -99,7 +118,181 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Mobile-first touch targets */
+  button, a, [role="button"] {
+    @apply min-h-[44px] min-w-[44px];
+  }
+}
+
+@layer components {
+  /* Glass morphism card */
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-lg border border-border/50 rounded-xl;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Elevated card */
+  .elevated-card {
+    @apply bg-card rounded-xl border border-border/30;
+    box-shadow: var(--shadow-elevated);
+  }
+
+  /* WhatsApp CTA button */
+  .btn-whatsapp {
+    @apply bg-[hsl(var(--whatsapp))] text-[hsl(var(--whatsapp-foreground))] 
+           hover:bg-[hsl(142,70%,40%)] active:bg-[hsl(142,70%,35%)]
+           font-semibold px-6 py-3 rounded-xl
+           transition-all duration-200 ease-out
+           shadow-lg hover:shadow-xl active:scale-[0.98];
+  }
+
+  /* Trust badge */
+  .trust-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .trust-gold {
+    @apply bg-[hsl(45,93%,90%)] text-[hsl(45,93%,30%)];
+  }
+
+  .trust-silver {
+    @apply bg-[hsl(220,13%,93%)] text-[hsl(220,13%,40%)];
+  }
+
+  .trust-bronze {
+    @apply bg-[hsl(30,41%,90%)] text-[hsl(30,41%,35%)];
+  }
+
+  .trust-verified {
+    @apply bg-[hsl(142,76%,90%)] text-[hsl(142,76%,30%)];
+  }
+
+  /* Bottom navigation */
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl 
+           border-t border-border/50 px-2 pb-safe;
+    box-shadow: 0 -4px 24px -4px hsl(222 47% 11% / 0.08);
+  }
+
+  .bottom-nav-item {
+    @apply flex flex-col items-center justify-center gap-0.5 py-2 px-3
+           text-muted-foreground transition-colors duration-200
+           min-h-[56px] min-w-[56px];
+  }
+
+  .bottom-nav-item.active {
+    @apply text-primary;
+  }
+
+  .bottom-nav-item.active svg {
+    @apply scale-110;
+  }
+
+  /* Category pill */
+  .category-pill {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-full
+           bg-secondary text-secondary-foreground font-medium text-sm
+           whitespace-nowrap transition-all duration-200
+           hover:bg-primary hover:text-primary-foreground
+           active:scale-95;
+  }
+
+  /* Shop card */
+  .shop-card {
+    @apply bg-card rounded-2xl overflow-hidden border border-border/50
+           transition-all duration-300 hover:shadow-lg active:scale-[0.98];
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Product card */
+  .product-card {
+    @apply bg-card rounded-xl overflow-hidden border border-border/30
+           transition-all duration-200 hover:shadow-md active:scale-[0.98];
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Rating stars */
+  .rating-stars {
+    @apply flex items-center gap-0.5;
+  }
+
+  .rating-star {
+    @apply w-4 h-4 text-[hsl(var(--accent))];
+  }
+
+  .rating-star-empty {
+    @apply w-4 h-4 text-muted;
+  }
+
+  /* Behaviour tag */
+  .behaviour-tag {
+    @apply inline-flex items-center gap-1 px-3 py-1.5 rounded-full
+           bg-secondary text-secondary-foreground text-sm font-medium
+           border border-transparent transition-all duration-200
+           cursor-pointer select-none;
+  }
+
+  .behaviour-tag.selected {
+    @apply bg-primary text-primary-foreground border-primary;
+  }
+
+  /* Search bar */
+  .search-bar {
+    @apply flex items-center gap-3 bg-muted/50 rounded-xl px-4 py-3
+           border border-transparent focus-within:border-primary/30
+           focus-within:bg-card transition-all duration-200;
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    @apply bg-muted animate-pulse rounded-lg;
+  }
+
+  /* Safe area padding */
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 16px);
+  }
+
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top), 16px);
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Snap scroll */
+  .snap-x-mandatory {
+    scroll-snap-type: x mandatory;
+  }
+
+  .snap-start {
+    scroll-snap-align: start;
+  }
+
+  /* Gradient overlays */
+  .gradient-fade-b {
+    background: linear-gradient(to bottom, transparent 0%, hsl(var(--background)) 100%);
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(217, 91%, 40%) 100%);
   }
 }
