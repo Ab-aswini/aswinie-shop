@@ -1,27 +1,49 @@
-import { User, ChevronRight, Settings, HelpCircle, LogOut, Shield, Store } from "lucide-react";
-import { Link } from "react-router-dom";
+import { User, ChevronRight, Settings, HelpCircle, LogOut, Shield, Store, Bell } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { TrustBadge } from "@/components/ui/TrustBadge";
+import { PushNotificationToggle } from "@/components/notifications/PushNotificationToggle";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const ProfilePage = () => {
-  // Mock user data
-  const user = {
-    name: "Ashwin Behera",
-    phone: "+91 98765 43210",
+  const navigate = useNavigate();
+  const { user, signOut, isVendor } = useAuth();
+  const { toast } = useToast();
+
+  // User data from auth
+  const userData = {
+    name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User",
+    email: user?.email || "",
     trustScore: 4.5,
     trustLevel: "gold" as const,
     savedShopsCount: 12,
     ratingsGiven: 8,
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({ title: "Logged out", description: "See you soon!" });
+      navigate("/");
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
   const menuItems = [
-    {
+    ...(isVendor ? [{
       icon: Store,
       label: "Switch to Business Mode",
       path: "/vendor/dashboard",
       highlight: true,
-    },
+    }] : [{
+      icon: Store,
+      label: "Become a Vendor",
+      path: "/vendor/register",
+      highlight: true,
+    }]),
     {
       icon: Shield,
       label: "Trust & Privacy",
@@ -49,14 +71,27 @@ const ProfilePage = () => {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold">{user.name}</h1>
-              <TrustBadge level={user.trustLevel} />
+              <h1 className="text-xl font-bold">{userData.name}</h1>
+              <TrustBadge level={userData.trustLevel} />
             </div>
+            <p className="text-sm text-muted-foreground">{userData.email}</p>
             <div className="flex items-center gap-2 mt-1">
-              <RatingStars rating={user.trustScore} />
-              <span className="text-sm font-medium">{user.trustScore}</span>
+              <RatingStars rating={userData.trustScore} />
+              <span className="text-sm font-medium">{userData.trustScore}</span>
             </div>
           </div>
+        </div>
+
+        {/* Push Notifications Toggle */}
+        <div className="flex items-center justify-between p-4 rounded-xl bg-card border border-border/50">
+          <div className="flex items-center gap-3">
+            <Bell className="w-5 h-5 text-muted-foreground" />
+            <div>
+              <p className="font-medium text-sm">Push Notifications</p>
+              <p className="text-xs text-muted-foreground">Get real-time alerts</p>
+            </div>
+          </div>
+          <PushNotificationToggle />
         </div>
 
         {/* Stats */}
@@ -66,13 +101,13 @@ const ProfilePage = () => {
             className="p-4 rounded-xl bg-secondary/50 text-center"
           >
             <div className="text-2xl font-bold text-primary">
-              {user.savedShopsCount}
+              {userData.savedShopsCount}
             </div>
             <div className="text-sm text-muted-foreground">Saved Shops</div>
           </Link>
           <div className="p-4 rounded-xl bg-secondary/50 text-center">
             <div className="text-2xl font-bold text-primary">
-              {user.ratingsGiven}
+              {userData.ratingsGiven}
             </div>
             <div className="text-sm text-muted-foreground">Ratings Given</div>
           </div>
@@ -98,7 +133,10 @@ const ProfilePage = () => {
         </div>
 
         {/* Logout */}
-        <button className="flex items-center gap-3 w-full p-4 rounded-xl text-destructive hover:bg-destructive/10 transition-colors">
+        <button 
+          onClick={handleLogout}
+          className="flex items-center gap-3 w-full p-4 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
+        >
           <LogOut className="w-5 h-5" />
           <span className="font-medium">Log Out</span>
         </button>
