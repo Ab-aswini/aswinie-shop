@@ -275,6 +275,7 @@ export default function ProductCreatePage() {
                 isUploading={isSubmitting}
                 enableCropping={true}
                 aspectRatio={1}
+                enableAIEnhancement={true}
               />
               {errors.images && touched.images && (
                 <Alert variant="destructive" className="py-2">
