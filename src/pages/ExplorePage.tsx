@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Filter, Store as StoreIcon, X } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Filter, Store as StoreIcon, X, ArrowUpDown, Clock, Star, TrendingUp } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CategorySlider } from "@/components/ui/CategorySlider";
 import { ShopCard } from "@/components/ui/ShopCard";
@@ -9,22 +9,52 @@ import CategoryFilter from "@/components/ui/CategoryFilter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+type SortOption = 'newest' | 'rating' | 'popular';
 
 const ExplorePage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
   const { data: vendors, isLoading } = useVendors();
   const isMobile = useIsMobile();
 
-  const filteredShops = selectedCategory && selectedCategory !== 'all'
-    ? vendors?.filter(shop => 
-        shop.category?.slug === selectedCategory
-      )
-    : vendors;
+  // Filter and sort shops
+  const filteredAndSortedShops = useMemo(() => {
+    let filtered = selectedCategory && selectedCategory !== 'all'
+      ? vendors?.filter(shop => shop.category?.slug === selectedCategory)
+      : vendors;
+
+    if (!filtered) return [];
+
+    // Sort based on selected option
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'rating':
+          return (b.avg_rating || 0) - (a.avg_rating || 0);
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'popular':
+          return (b.years_active || 0) - (a.years_active || 0);
+        default:
+          return 0;
+      }
+    });
+  }, [vendors, selectedCategory, sortBy]);
 
   const handleCategorySelect = (slug: string) => {
     setSelectedCategory(slug);
     setIsFilterOpen(false);
+  };
+
+  const getSortIcon = () => {
+    switch (sortBy) {
+      case 'rating': return <Star className="w-4 h-4" />;
+      case 'newest': return <Clock className="w-4 h-4" />;
+      case 'popular': return <TrendingUp className="w-4 h-4" />;
+      default: return <ArrowUpDown className="w-4 h-4" />;
+    }
   };
 
   return (
@@ -43,48 +73,80 @@ const ExplorePage = () => {
 
         {/* Main Content */}
         <div className="flex-1 px-4 py-4 space-y-4">
-          {/* Header with filter */}
-          <div className="flex items-center justify-between">
+          {/* Header with filter and sort */}
+          <div className="flex items-center justify-between gap-2">
             <h1 className="text-xl font-bold">Explore Local Shops</h1>
             
-            {/* Mobile Filter Button */}
-            {isMobile && (
-              <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="secondary" size="icon" className="relative">
-                    <Filter className="w-5 h-5" />
-                    {selectedCategory !== 'all' && (
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-80 p-0">
-                  <SheetHeader className="p-4 border-b border-border">
-                    <SheetTitle className="flex items-center justify-between">
-                      Filter by Category
-                      {selectedCategory !== 'all' && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleCategorySelect('all')}
-                          className="text-xs"
-                        >
-                          Clear filter
-                        </Button>
-                      )}
-                    </SheetTitle>
-                  </SheetHeader>
-                  <div className="p-4">
-                    <CategoryFilter
-                      selectedCategory={selectedCategory}
-                      onSelectCategory={handleCategorySelect}
-                      type="product"
-                      showCard={false}
-                    />
+            <div className="flex items-center gap-2">
+              {/* Sort Dropdown */}
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                <SelectTrigger className="w-[130px] h-9">
+                  <div className="flex items-center gap-2">
+                    {getSortIcon()}
+                    <SelectValue />
                   </div>
-                </SheetContent>
-              </Sheet>
-            )}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      Newest
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="rating">
+                    <div className="flex items-center gap-2">
+                      <Star className="w-4 h-4" />
+                      Top Rated
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="popular">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4" />
+                      Popular
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Mobile Filter Button */}
+              {isMobile && (
+                <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="icon" className="relative h-9 w-9">
+                      <Filter className="w-4 h-4" />
+                      {selectedCategory !== 'all' && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full" />
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[85vw] max-w-sm p-0">
+                    <SheetHeader className="p-4 border-b border-border">
+                      <SheetTitle className="flex items-center justify-between">
+                        Filter by Category
+                        {selectedCategory !== 'all' && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleCategorySelect('all')}
+                            className="text-xs"
+                          >
+                            Clear
+                          </Button>
+                        )}
+                      </SheetTitle>
+                    </SheetHeader>
+                    <div className="p-4 overflow-y-auto max-h-[calc(100vh-80px)]">
+                      <CategoryFilter
+                        selectedCategory={selectedCategory}
+                        onSelectCategory={handleCategorySelect}
+                        type="product"
+                        showCard={false}
+                      />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              )}
+            </div>
           </div>
 
           {/* Mobile Category Slider */}
@@ -92,22 +154,23 @@ const ExplorePage = () => {
             <CategorySlider
               selected={selectedCategory}
               onSelect={handleCategorySelect}
+              type="product"
             />
           )}
 
           {/* Results count with active filter indicator */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center flex-wrap gap-2">
             <p className="text-sm text-muted-foreground">
-              {filteredShops?.length || 0} shops found
+              {filteredAndSortedShops.length} shops found
             </p>
             {selectedCategory !== 'all' && (
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
-                className="h-6 text-xs gap-1"
+                className="h-6 text-xs gap-1 rounded-full"
                 onClick={() => setSelectedCategory('all')}
               >
-                {selectedCategory}
+                {selectedCategory.replace(/-/g, ' ')}
                 <X className="w-3 h-3" />
               </Button>
             )}
@@ -124,9 +187,9 @@ const ExplorePage = () => {
                 </div>
               ))}
             </div>
-          ) : filteredShops && filteredShops.length > 0 ? (
+          ) : filteredAndSortedShops.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {filteredShops.map((shop) => (
+              {filteredAndSortedShops.map((shop) => (
                 <ShopCard
                   key={shop.id}
                   id={shop.id}
