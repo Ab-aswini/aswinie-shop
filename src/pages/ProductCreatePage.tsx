@@ -273,8 +273,7 @@ export default function ProductCreatePage() {
                 }}
                 maxImages={5}
                 isUploading={isSubmitting}
-                enableCropping={true}
-                aspectRatio={1}
+                enableCropping={false}
                 enableAIEnhancement={true}
               />
               {errors.images && touched.images && (
