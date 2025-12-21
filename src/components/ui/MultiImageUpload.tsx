@@ -198,8 +198,8 @@ export function MultiImageUpload({
 
   return (
     <div className="space-y-4">
-      {/* Main Grid - Always show consistent layout */}
-      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+      {/* Main Grid */}
+      <div className="grid grid-cols-3 gap-2">
         {/* Uploaded Images */}
         {images.map((image, index) => (
           <div
@@ -209,9 +209,9 @@ export function MultiImageUpload({
             onDragOver={(e) => handleDragOver(e, index)}
             onDragEnd={handleDragEnd}
             className={cn(
-              "relative aspect-square rounded-xl overflow-hidden group",
-              "bg-muted border-2 transition-all duration-200",
-              index === 0 ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-muted-foreground/30",
+              "relative aspect-square rounded-lg overflow-hidden group",
+              "bg-muted border transition-all duration-200",
+              index === 0 ? "border-primary" : "border-border",
               draggedIndex === index && "opacity-50 scale-95",
               enhancingImageId === image.id ? "cursor-wait" : "cursor-grab active:cursor-grabbing"
             )}
@@ -221,25 +221,25 @@ export function MultiImageUpload({
               src={image.url}
               alt={`Product ${index + 1}`}
               className={cn(
-                "w-full h-full object-cover transition-all duration-300",
-                enhancingImageId === image.id && "opacity-30 blur-sm scale-110"
+                "w-full h-full object-cover",
+                enhancingImageId === image.id && "opacity-30 blur-sm"
               )}
               draggable={false}
             />
             
-            {/* Main Badge */}
+            {/* Main Badge - Smaller */}
             {index === 0 && enhancingImageId !== image.id && (
-              <div className="absolute top-2 left-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-primary text-primary-foreground rounded-md shadow-lg">
+              <div className="absolute top-1 left-1 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide bg-primary text-primary-foreground rounded">
                 Main
               </div>
             )}
 
-            {/* Enhancing State */}
+            {/* Enhancing State - Compact */}
             {enhancingImageId === image.id && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="bg-background/95 backdrop-blur-sm rounded-xl px-4 py-3 shadow-lg border border-border flex flex-col items-center gap-2">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  <span className="text-xs font-medium text-foreground">Enhancing...</span>
+                <div className="bg-background/90 rounded-lg px-2 py-1.5 flex flex-col items-center gap-1">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span className="text-[9px] font-medium">Enhancing...</span>
                 </div>
               </div>
             )}
@@ -247,28 +247,28 @@ export function MultiImageUpload({
             {/* Hover Controls */}
             {enhancingImageId !== image.id && (
               <>
-                {/* Delete Button - Always visible on hover, top right */}
+                {/* Delete Button - Small, top right */}
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     removeImage(image.id);
                   }}
-                  className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 hover:bg-destructive transition-all duration-200 shadow-lg"
+                  className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 hover:bg-destructive transition-all"
                   title="Remove"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3 h-3" />
                 </button>
 
-                {/* Bottom Actions Bar */}
-                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-200">
-                  <div className="flex items-center justify-center gap-1.5">
+                {/* Bottom Actions - Compact */}
+                <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center justify-center gap-1">
                     <button
                       type="button"
-                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
+                      className="w-6 h-6 flex items-center justify-center rounded bg-white/25 text-white hover:bg-white/40 transition-colors"
                       title="Drag to reorder"
                     >
-                      <GripVertical className="w-4 h-4" />
+                      <GripVertical className="w-3 h-3" />
                     </button>
                     
                     {enableCropping && (
@@ -278,10 +278,10 @@ export function MultiImageUpload({
                           e.stopPropagation();
                           handleEditImage(image);
                         }}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
+                        className="w-6 h-6 flex items-center justify-center rounded bg-white/25 text-white hover:bg-white/40 transition-colors"
                         title="Crop"
                       >
-                        <Crop className="w-4 h-4" />
+                        <Crop className="w-3 h-3" />
                       </button>
                     )}
                     
@@ -290,35 +290,35 @@ export function MultiImageUpload({
                         <DropdownMenuTrigger asChild>
                           <button
                             type="button"
-                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+                            className="w-6 h-6 flex items-center justify-center rounded bg-primary text-primary-foreground hover:bg-primary/80 transition-colors"
                             title="AI Enhance"
                           >
-                            <Sparkles className="w-4 h-4" />
+                            <Sparkles className="w-3 h-3" />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent 
                           align="center" 
                           side="top" 
-                          sideOffset={8}
-                          className="min-w-[180px] bg-popover border border-border shadow-xl z-50"
+                          sideOffset={4}
+                          className="min-w-[150px] bg-popover border shadow-xl z-50"
                         >
                           <DropdownMenuItem 
                             onClick={() => handleEnhanceImage(image, 'clean-background')}
-                            className="gap-2 cursor-pointer"
+                            className="text-xs gap-2 cursor-pointer py-1.5"
                           >
-                            <span>🎨</span> Clean Background
+                            🎨 Clean Background
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleEnhanceImage(image, 'professional')}
-                            className="gap-2 cursor-pointer"
+                            className="text-xs gap-2 cursor-pointer py-1.5"
                           >
-                            <span>✨</span> Professional Look
+                            ✨ Professional Look
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleEnhanceImage(image, 'bright-lighting')}
-                            className="gap-2 cursor-pointer"
+                            className="text-xs gap-2 cursor-pointer py-1.5"
                           >
-                            <span>💡</span> Bright Lighting
+                            💡 Bright Lighting
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -330,26 +330,15 @@ export function MultiImageUpload({
           </div>
         ))}
 
-        {/* Add More Button */}
+        {/* Add More Button - Same size as images */}
         {images.length < maxImages && (
-          <label
-            className={cn(
-              "aspect-square rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200",
-              "flex flex-col items-center justify-center gap-2",
-              "border-border hover:border-primary hover:bg-primary/5",
-              "group"
-            )}
-          >
+          <label className="aspect-square rounded-lg border-2 border-dashed border-border cursor-pointer hover:border-primary hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-1">
             {isUploading ? (
-              <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+              <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
             ) : (
               <>
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                  <Plus className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
-                <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
-                  Add Photo
-                </span>
+                <Plus className="w-5 h-5 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground">Add</span>
               </>
             )}
             <input
@@ -362,32 +351,13 @@ export function MultiImageUpload({
             />
           </label>
         )}
-
-        {/* Empty Placeholder Slots */}
-        {images.length === 0 && [...Array(emptySlots)].map((_, i) => (
-          <div
-            key={`empty-${i}`}
-            className="aspect-square rounded-xl border-2 border-dashed border-border/50 flex items-center justify-center"
-          >
-            <ImageIcon className="w-6 h-6 text-muted-foreground/30" />
-          </div>
-        ))}
       </div>
 
-      {/* Helper Text */}
-      <div className="text-center space-y-1">
-        <p className="text-xs text-muted-foreground">
-          {images.length === 0 
-            ? `Upload up to ${maxImages} product photos` 
-            : `${images.length}/${maxImages} photos • Drag to reorder`}
-        </p>
-        {enableAIEnhancement && images.length > 0 && (
-          <p className="text-xs text-primary/80 flex items-center justify-center gap-1">
-            <Sparkles className="w-3 h-3" />
-            Hover image for AI enhancement options
-          </p>
-        )}
-      </div>
+      {/* Helper Text - Minimal */}
+      <p className="text-[10px] text-muted-foreground text-center">
+        {images.length}/{maxImages} photos • First is main • Drag to reorder
+        {enableAIEnhancement && " • Hover for AI ✨"}
+      </p>
 
       {/* Image Cropper Dialog */}
       {enableCropping && cropperImageSrc && (
