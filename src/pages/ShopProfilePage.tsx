@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Share2, MapPin, Calendar, CheckCircle2, MessageCircle, Store as StoreIcon } from "lucide-react";
+import { ArrowLeft, Share2, MapPin, Calendar, CheckCircle2, MessageCircle, Store as StoreIcon, Navigation } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { RatingStars } from "@/components/ui/RatingStars";
@@ -8,6 +8,7 @@ import { WhatsAppCTA } from "@/components/ui/WhatsAppCTA";
 import { useVendorById } from "@/hooks/useVendors";
 import { useProducts } from "@/hooks/useProducts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 const ShopProfilePage = () => {
   const { shopId } = useParams<{ shopId: string }>();
@@ -116,9 +117,23 @@ const ShopProfilePage = () => {
                 </div>
               )}
               {(shop.city || shop.location) && (
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <MapPin className="w-4 h-4" />
-                  <span>{shop.location || shop.city}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <MapPin className="w-4 h-4" />
+                    <span className="truncate max-w-[200px]">{shop.location || shop.city}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-primary gap-1"
+                    onClick={() => {
+                      const query = encodeURIComponent(shop.location || shop.city || '');
+                      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+                    }}
+                  >
+                    <Navigation className="w-3 h-3" />
+                    Get Directions
+                  </Button>
                 </div>
               )}
             </div>
