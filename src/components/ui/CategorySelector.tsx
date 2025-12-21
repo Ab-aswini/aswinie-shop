@@ -32,9 +32,9 @@ export function CategorySelector({ value, onChange, type, className }: CategoryS
         {[...Array(4)].map((_, i) => (
           <div key={i} className="space-y-2">
             <Skeleton className="h-6 w-32" />
-            <div className="grid grid-cols-2 gap-2">
-              {[...Array(4)].map((_, j) => (
-                <Skeleton key={j} className="h-14 rounded-xl" />
+            <div className="flex flex-col gap-2">
+              {[...Array(3)].map((_, j) => (
+                <Skeleton key={j} className="h-12 rounded-xl" />
               ))}
             </div>
           </div>
@@ -44,41 +44,41 @@ export function CategorySelector({ value, onChange, type, className }: CategoryS
   }
 
   return (
-    <ScrollArea className={cn("h-[400px] pr-4", className)}>
-      <div className="space-y-6">
+    <ScrollArea className={cn("h-[400px] pr-2", className)}>
+      <div className="space-y-4">
         {categories?.map((group) => {
           const GroupIcon = getCategoryIcon(group.slug);
           const isOpen = openGroups.includes(group.id);
           const hasChildren = group.children && group.children.length > 0;
 
           return (
-            <div key={group.id} className="space-y-3">
+            <div key={group.id} className="space-y-2">
               {/* Group Header */}
               <button
                 type="button"
                 onClick={() => hasChildren ? toggleGroup(group.id) : onChange(group.slug, group.id)}
                 className={cn(
-                  "flex items-center justify-between w-full text-sm font-semibold transition-colors py-2 px-3 rounded-lg",
+                  "flex items-center justify-between w-full text-sm font-semibold transition-colors py-2.5 px-3 rounded-xl",
                   value === group.slug
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <GroupIcon className="w-4 h-4" />
-                  <span>{group.name}</span>
+                <div className="flex items-center gap-2.5">
+                  <GroupIcon className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-left">{group.name}</span>
                 </div>
                 {hasChildren && (
                   <motion.div
                     animate={{ rotate: isOpen ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <ChevronDown className="w-4 h-4" />
+                    <ChevronDown className="w-4 h-4 flex-shrink-0" />
                   </motion.div>
                 )}
               </button>
 
-              {/* Animated Category List */}
+              {/* Animated Category List - Single Column Layout */}
               <AnimatePresence initial={false}>
                 {hasChildren && isOpen && (
                   <motion.div
@@ -92,7 +92,7 @@ export function CategorySelector({ value, onChange, type, className }: CategoryS
                       variants={categoryAnimations.container}
                       initial="hidden"
                       animate="show"
-                      className="grid grid-cols-2 gap-2 pl-2"
+                      className="flex flex-col gap-2 pl-3"
                     >
                       {group.children?.map((category) => {
                         const Icon = getCategoryIcon(category.slug);
@@ -104,10 +104,10 @@ export function CategorySelector({ value, onChange, type, className }: CategoryS
                             type="button"
                             variants={categoryAnimations.item}
                             onClick={() => onChange(category.slug, category.id)}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
                             className={cn(
-                              "flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all",
+                              "flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all min-h-[48px]",
                               isSelected
                                 ? "border-primary bg-primary/5 ring-2 ring-primary/20"
                                 : "border-border hover:border-primary/50 hover:bg-accent/50"
@@ -115,7 +115,7 @@ export function CategorySelector({ value, onChange, type, className }: CategoryS
                           >
                             <div
                               className={cn(
-                                "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+                                "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors",
                                 isSelected
                                   ? "bg-primary text-primary-foreground"
                                   : "bg-secondary text-secondary-foreground"
@@ -123,11 +123,11 @@ export function CategorySelector({ value, onChange, type, className }: CategoryS
                             >
                               <Icon className="w-4 h-4" />
                             </div>
-                            <span className="text-sm font-medium truncate flex-1">
+                            <span className="text-sm font-medium flex-1 leading-tight">
                               {category.name}
                             </span>
                             {isSelected && (
-                              <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                              <Check className="w-5 h-5 text-primary flex-shrink-0" />
                             )}
                           </motion.button>
                         );
