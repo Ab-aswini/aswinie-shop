@@ -8,8 +8,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Upload, Sparkles, Loader2, Wand2, ImagePlus } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, ImagePlus } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { MultiImageUpload } from "@/components/ui/MultiImageUpload";
+
+interface ImageItem {
+  id: string;
+  url: string;
+  file?: File;
+  isNew?: boolean;
+}
 
 export default function ProductCreatePage() {
   const navigate = useNavigate();
@@ -18,7 +26,6 @@ export default function ProductCreatePage() {
   
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isEnhancing, setIsEnhancing] = useState(false);
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -29,9 +36,7 @@ export default function ProductCreatePage() {
     category: "",
   });
   
-  const [productImage, setProductImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [enhancedImage, setEnhancedImage] = useState<string | null>(null);
+  const [productImages, setProductImages] = useState<ImageItem[]>([]);
 
   // Check if user is a vendor
   useEffect(() => {
@@ -58,60 +63,6 @@ export default function ProductCreatePage() {
       navigate("/auth");
     }
   }, [user, loading, navigate]);
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setProductImage(file);
-      setEnhancedImage(null);
-      const reader = new FileReader();
-      reader.onload = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const enhanceWithAI = async () => {
-    if (!imagePreview) return;
-    
-    setIsEnhancing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('ai-assist', {
-        body: {
-          type: 'enhance-product-image',
-          imageBase64: imagePreview,
-        },
-      });
-      
-      if (error) throw error;
-      
-      if (data?.enhancedImage) {
-        setEnhancedImage(data.enhancedImage);
-        toast({ title: "Image enhanced!" });
-      }
-      
-      // Auto-fill form if AI extracted product info
-      if (data?.productInfo) {
-        const info = data.productInfo;
-        if (info.productName && !formData.name) {
-          setFormData(prev => ({ ...prev, name: info.productName }));
-        }
-        if (info.description && !formData.description) {
-          setFormData(prev => ({ ...prev, description: info.description }));
-        }
-        if (info.priceRange?.min && !formData.price) {
-          setFormData(prev => ({ 
-            ...prev, 
-            price: String(info.priceRange.min),
-            priceMax: info.priceRange.max ? String(info.priceRange.max) : ""
-          }));
-        }
-      }
-    } catch (e) {
-      toast({ title: "Enhancement failed", variant: "destructive" });
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
 
   const generateDescription = async () => {
     if (!formData.name) {
@@ -141,20 +92,6 @@ export default function ProductCreatePage() {
     }
   };
 
-  const uploadImage = async (file: File, path: string) => {
-    const { data, error } = await supabase.storage
-      .from('product-images')
-      .upload(path, file, { upsert: true });
-    
-    if (error) throw error;
-    
-    const { data: urlData } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(path);
-    
-    return urlData.publicUrl;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -166,46 +103,61 @@ export default function ProductCreatePage() {
     setIsSubmitting(true);
 
     try {
-      let originalImageUrl = null;
-      let enhancedImageUrl = null;
+      // Create the product first
+      const { data: newProduct, error: productError } = await supabase
+        .from('products')
+        .insert({
+          vendor_id: vendorId,
+          name: formData.name,
+          description: formData.description || null,
+          price: formData.price ? parseFloat(formData.price) : null,
+          price_max: formData.priceMax ? parseFloat(formData.priceMax) : null,
+          category: formData.category || null,
+          is_active: true,
+        })
+        .select('id')
+        .single();
 
-      // Upload original image
-      if (productImage) {
-        const path = `${vendorId}/${Date.now()}-original.${productImage.name.split('.').pop()}`;
-        originalImageUrl = await uploadImage(productImage, path);
-      }
+      if (productError) throw productError;
 
-      // Upload enhanced image if exists (convert base64 to blob)
-      if (enhancedImage) {
-        const response = await fetch(enhancedImage);
-        const blob = await response.blob();
-        const path = `${vendorId}/${Date.now()}-enhanced.png`;
-        const { error } = await supabase.storage
-          .from('product-images')
-          .upload(path, blob, { upsert: true });
+      // Upload images to storage and create product_images records
+      const uploadPromises = productImages.map(async (image, index) => {
+        if (!image.file) return null;
         
-        if (!error) {
-          const { data: urlData } = supabase.storage
-            .from('product-images')
-            .getPublicUrl(path);
-          enhancedImageUrl = urlData.publicUrl;
-        }
-      }
-
-      // Create product
-      const { error } = await supabase.from('products').insert({
-        vendor_id: vendorId,
-        name: formData.name,
-        description: formData.description || null,
-        price: formData.price ? parseFloat(formData.price) : null,
-        price_max: formData.priceMax ? parseFloat(formData.priceMax) : null,
-        category: formData.category || null,
-        original_image_url: originalImageUrl,
-        enhanced_image_url: enhancedImageUrl || originalImageUrl,
-        is_active: true,
+        const path = `${vendorId}/${newProduct.id}/${Date.now()}-${index}.${image.file.name.split('.').pop()}`;
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(path, image.file, { upsert: true });
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: urlData } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(path);
+        
+        return {
+          product_id: newProduct.id,
+          image_url: urlData.publicUrl,
+          display_order: index,
+          is_primary: index === 0,
+        };
       });
 
-      if (error) throw error;
+      const imageRecords = (await Promise.all(uploadPromises)).filter(Boolean);
+      
+      if (imageRecords.length > 0) {
+        const { error: imagesError } = await supabase
+          .from('product_images')
+          .insert(imageRecords);
+        
+        if (imagesError) throw imagesError;
+        
+        // Also set the first image as the legacy image URL for backwards compatibility
+        await supabase.from('products').update({
+          original_image_url: imageRecords[0]?.image_url,
+          enhanced_image_url: imageRecords[0]?.image_url,
+        }).eq('id', newProduct.id);
+      }
 
       toast({ title: "Product added!" });
       navigate("/vendor/dashboard");
@@ -244,52 +196,17 @@ export default function ProductCreatePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ImagePlus className="w-5 h-5" />
-                Product Image
+                Product Images
               </CardTitle>
-              <CardDescription>Upload and enhance with AI</CardDescription>
+              <CardDescription>Upload up to 5 photos</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div 
-                className="border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                onClick={() => document.getElementById('product-image')?.click()}
-              >
-                {imagePreview ? (
-                  <img src={enhancedImage || imagePreview} alt="Preview" className="w-full h-48 object-contain rounded-lg" />
-                ) : (
-                  <>
-                    <Upload className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">Tap to upload product photo</p>
-                  </>
-                )}
-                <input
-                  id="product-image"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageChange}
-                />
-              </div>
-
-              {imagePreview && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={enhanceWithAI}
-                  disabled={isEnhancing}
-                >
-                  {isEnhancing ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Wand2 className="w-4 h-4" />
-                  )}
-                  {isEnhancing ? "Enhancing..." : "AI Enhance & Extract Info"}
-                </Button>
-              )}
-
-              {enhancedImage && (
-                <p className="text-xs text-center text-primary">✓ AI enhanced image ready</p>
-              )}
+            <CardContent>
+              <MultiImageUpload
+                images={productImages}
+                onImagesChange={setProductImages}
+                maxImages={5}
+                isUploading={isSubmitting}
+              />
             </CardContent>
           </Card>
 

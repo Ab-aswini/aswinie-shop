@@ -1,11 +1,19 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Share2, MapPin, MessageCircle, Store, ChevronRight } from "lucide-react";
+import { useEffect } from "react";
+import { ArrowLeft, Share2, MapPin, Store, ChevronRight } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { WhatsAppCTA } from "@/components/ui/WhatsAppCTA";
+import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+
+interface ProductImage {
+  id: string;
+  image_url: string;
+  display_order: number;
+  is_primary: boolean;
+}
 
 interface ProductWithVendor {
   id: string;
@@ -17,6 +25,7 @@ interface ProductWithVendor {
   original_image_url: string | null;
   enhanced_image_url: string | null;
   highlights: string[] | null;
+  vendor_id: string;
   vendors: {
     id: string;
     business_name: string;
@@ -56,6 +65,32 @@ export default function ProductDetailPage() {
     },
     enabled: !!productId,
   });
+
+  // Fetch additional images
+  const { data: productImages } = useQuery({
+    queryKey: ['product-images', productId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_images')
+        .select('*')
+        .eq('product_id', productId!)
+        .order('display_order', { ascending: true });
+      
+      if (error) throw error;
+      return data as ProductImage[];
+    },
+    enabled: !!productId,
+  });
+
+  // Track product view
+  useEffect(() => {
+    if (product && product.vendor_id) {
+      supabase.from('product_views').insert({
+        product_id: product.id,
+        vendor_id: product.vendor_id,
+      }).then(() => {});
+    }
+  }, [product]);
 
   const formatPrice = (price: number | null, priceMax: number | null) => {
     if (!price) return "Price on request";
@@ -105,23 +140,33 @@ export default function ProductDetailPage() {
     );
   }
 
-  const imageUrl = product.enhanced_image_url || product.original_image_url || 
-    "https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=600";
+  // Build images array from product_images table + fallback to original/enhanced
+  const allImages: string[] = [];
+  if (productImages && productImages.length > 0) {
+    allImages.push(...productImages.map(img => img.image_url));
+  } else {
+    // Fallback to legacy single image fields
+    const fallbackImage = product.enhanced_image_url || product.original_image_url;
+    if (fallbackImage) {
+      allImages.push(fallbackImage);
+    } else {
+      allImages.push("https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=600");
+    }
+  }
 
   return (
     <AppLayout showHeader={false}>
       <div className="pb-24">
-        {/* Product Image */}
+        {/* Product Image Gallery */}
         <div className="relative">
-          <img
-            src={imageUrl}
-            alt={product.name}
-            className="w-full h-72 object-cover"
+          <ProductImageGallery 
+            images={allImages} 
+            productName={product.name} 
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent pointer-events-none" />
           
           {/* Navigation */}
-          <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+          <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
             <Link
               to={-1 as any}
               className="w-10 h-10 flex items-center justify-center rounded-full bg-card/80 backdrop-blur-sm"
