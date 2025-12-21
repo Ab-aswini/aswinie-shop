@@ -1,22 +1,44 @@
-import { User, ChevronRight, Settings, HelpCircle, LogOut, Shield, Store, Bell } from "lucide-react";
+import { ChevronRight, Settings, HelpCircle, LogOut, Shield, Store, Bell } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { TrustBadge } from "@/components/ui/TrustBadge";
+import { AvatarUpload } from "@/components/ui/AvatarUpload";
 import { PushNotificationToggle } from "@/components/notifications/PushNotificationToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const { user, signOut, isVendor } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // User data from auth
+  // Fetch user profile with avatar
+  const { data: profile } = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // User data from auth and profile
   const userData = {
-    name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User",
+    name: profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User",
     email: user?.email || "",
-    trustScore: 4.5,
+    avatarUrl: profile?.avatar_url,
+    trustScore: profile?.trust_score || 4.5,
     trustLevel: "gold" as const,
     savedShopsCount: 12,
     ratingsGiven: 8,
@@ -30,6 +52,10 @@ const ProfilePage = () => {
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
+  };
+
+  const handleAvatarUpdate = () => {
+    queryClient.invalidateQueries({ queryKey: ['user-profile', user?.id] });
   };
 
   const menuItems = [
@@ -64,11 +90,23 @@ const ProfilePage = () => {
   return (
     <AppLayout>
       <div className="px-4 py-6 space-y-6">
-        {/* Profile header */}
+        {/* Profile header with avatar upload */}
         <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center">
-            <User className="w-10 h-10 text-muted-foreground" />
-          </div>
+          {user?.id ? (
+            <AvatarUpload
+              userId={user.id}
+              currentAvatarUrl={userData.avatarUrl}
+              userName={userData.name}
+              onUploadComplete={handleAvatarUpdate}
+              size="lg"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center">
+              <span className="text-2xl font-bold text-muted-foreground">
+                {userData.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          )}
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold">{userData.name}</h1>
