@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Sparkles, Loader2, ImagePlus } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, ImagePlus, Tag } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { MultiImageUpload } from "@/components/ui/MultiImageUpload";
+import { CategorySelector } from "@/components/ui/CategorySelector";
 
 interface ImageItem {
   id: string;
@@ -34,8 +35,10 @@ export default function ProductCreatePage() {
     price: "",
     priceMax: "",
     category: "",
+    categoryId: "",
   });
   
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState("");
   const [productImages, setProductImages] = useState<ImageItem[]>([]);
 
   // Check if user is a vendor
@@ -76,7 +79,7 @@ export default function ProductCreatePage() {
         body: {
           type: 'suggest-product-description',
           productName: formData.name,
-          category: formData.category,
+          category: selectedCategorySlug || formData.category,
         },
       });
       
@@ -112,7 +115,7 @@ export default function ProductCreatePage() {
           description: formData.description || null,
           price: formData.price ? parseFloat(formData.price) : null,
           price_max: formData.priceMax ? parseFloat(formData.priceMax) : null,
-          category: formData.category || null,
+          category: selectedCategorySlug || formData.category || null,
           is_active: true,
         })
         .select('id')
@@ -255,16 +258,6 @@ export default function ProductCreatePage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
-                  placeholder="e.g., sarees, electronics, groceries"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                />
-              </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="price">Price (₹)</Label>
@@ -287,6 +280,70 @@ export default function ProductCreatePage() {
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Category Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tag className="w-5 h-5" />
+                Product Category
+              </CardTitle>
+              <CardDescription>Select a category and subcategory for better visibility</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <CategorySelector
+                value={selectedCategorySlug}
+                onChange={(slug, categoryId) => {
+                  setSelectedCategorySlug(slug);
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    category: slug,
+                    categoryId: categoryId || '' 
+                  }));
+                }}
+                type="product"
+                className="max-h-[300px]"
+              />
+              
+              {/* Fallback manual input */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">or enter custom</span>
+                </div>
+              </div>
+              
+              <Input
+                placeholder="Custom category (e.g., handmade jewelry)"
+                value={selectedCategorySlug ? '' : formData.category}
+                onChange={(e) => {
+                  setSelectedCategorySlug('');
+                  setFormData({ ...formData, category: e.target.value, categoryId: '' });
+                }}
+                disabled={!!selectedCategorySlug}
+              />
+              
+              {selectedCategorySlug && (
+                <p className="text-sm text-muted-foreground">
+                  Selected: <span className="font-medium text-foreground">{selectedCategorySlug.replace(/-/g, ' ')}</span>
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="text-xs ml-2 h-auto p-0"
+                    onClick={() => {
+                      setSelectedCategorySlug('');
+                      setFormData(prev => ({ ...prev, category: '', categoryId: '' }));
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </p>
+              )}
             </CardContent>
           </Card>
 

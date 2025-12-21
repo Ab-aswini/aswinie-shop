@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Store, Phone, MapPin, FileText, ArrowLeft, Upload, CheckCircle, Sparkles, Loader2, Navigation, ExternalLink } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { MiniMap } from "@/components/ui/MiniMap";
+import { CategorySelector } from "@/components/ui/CategorySelector";
 
 export default function VendorRegisterPage() {
   const navigate = useNavigate();
@@ -37,6 +37,7 @@ export default function VendorRegisterPage() {
   });
   const [shopImage, setShopImage] = useState<File | null>(null);
   const [logoImage, setLogoImage] = useState<File | null>(null);
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState("");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -257,29 +258,18 @@ export default function VendorRegisterPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Select 
-                    value={formData.categoryId} 
-                    onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      {categoriesHierarchy?.map((parent) => (
-                        <SelectGroup key={parent.id}>
-                          <SelectLabel className="text-primary font-semibold">
-                            {parent.icon} {parent.name}
-                          </SelectLabel>
-                          {parent.children?.map((sub) => (
-                            <SelectItem key={sub.id} value={sub.id} className="pl-6">
-                              {sub.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Category *</Label>
+                  <CategorySelector
+                    value={selectedCategorySlug}
+                    onChange={(slug, categoryId) => {
+                      setSelectedCategorySlug(slug);
+                      if (categoryId) {
+                        setFormData({ ...formData, categoryId });
+                      }
+                    }}
+                    type="product"
+                    className="border rounded-lg p-3 bg-card"
+                  />
                 </div>
 
                 <div className="space-y-2">
