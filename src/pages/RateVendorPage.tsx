@@ -1,21 +1,41 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, CheckCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, Sparkles, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { BehaviourTag, behaviourTags } from "@/components/ui/BehaviourTag";
-import { getShopById } from "@/data/mockData";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const RateVendorPage = () => {
   const { shopId } = useParams<{ shopId: string }>();
   const navigate = useNavigate();
-  const shop = getShopById(shopId || "");
+  const { user } = useAuth();
 
+  const [shop, setShop] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [feedback, setFeedback] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingReview, setIsGeneratingReview] = useState(false);
+
+  useEffect(() => {
+    const fetchShop = async () => {
+      if (!shopId) return;
+      const { data } = await supabase
+        .from('vendors')
+        .select('*, category:categories(name)')
+        .eq('id', shopId)
+        .single();
+      setShop(data);
+      setLoading(false);
+    };
+    fetchShop();
+  }, [shopId]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -23,7 +43,31 @@ const RateVendorPage = () => {
     );
   };
 
-  const handleSubmit = () => {
+  const generateAIReview = async () => {
+    if (rating === 0) {
+      toast({ title: "Rate first", description: "Select stars before generating review", variant: "destructive" });
+      return;
+    }
+    setIsGeneratingReview(true);
+    try {
+      const sentiment = rating >= 4 ? "positive" : rating >= 3 ? "neutral" : "negative";
+      const { data } = await supabase.functions.invoke('ai-assist', {
+        body: {
+          type: 'rate-help',
+          prompt: `Write a ${sentiment} review for ${shop?.business_name}. Tags: ${selectedTags.join(', ') || 'good service'}`
+        }
+      });
+      if (data?.response) {
+        setFeedback(data.response);
+      }
+    } catch (e) {
+      toast({ title: "Failed to generate", variant: "destructive" });
+    } finally {
+      setIsGeneratingReview(false);
+    }
+  };
+
+  const handleSubmit = async () => {
     if (rating === 0) {
       toast({
         title: "Please rate your experience",
@@ -33,14 +77,48 @@ const RateVendorPage = () => {
       return;
     }
 
-    // In real app, this would send to backend
-    console.log({ shopId, rating, selectedTags, feedback });
-    setSubmitted(true);
-    toast({
-      title: "Thank you!",
-      description: "Your feedback helps build trust in our community.",
-    });
+    if (!user) {
+      toast({ title: "Please login to rate", variant: "destructive" });
+      navigate("/auth");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from('vendor_ratings').insert({
+        vendor_id: shopId,
+        user_id: user.id,
+        product_quality: rating,
+        behavior_score: rating,
+        behavior_tags: selectedTags,
+        comment: feedback || null,
+      });
+
+      if (error) throw error;
+
+      setSubmitted(true);
+      toast({
+        title: "Thank you!",
+        description: "Your feedback helps build trust in our community.",
+      });
+    } catch (e: any) {
+      toast({ title: "Failed to submit", description: e.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <AppLayout showHeader={false} showNav={false}>
+        <div className="p-4 space-y-4">
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (!shop) {
     return (
@@ -57,12 +135,12 @@ const RateVendorPage = () => {
     return (
       <AppLayout showHeader={false} showNav={false}>
         <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-          <div className="w-20 h-20 rounded-full bg-trust-verified/20 flex items-center justify-center mb-6">
-            <CheckCircle className="w-10 h-10 text-trust-verified" />
+          <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mb-6">
+            <CheckCircle className="w-10 h-10 text-primary" />
           </div>
           <h2 className="text-2xl font-bold mb-2">Thank You!</h2>
           <p className="text-muted-foreground mb-8 max-w-[280px]">
-            Your feedback helps {shop.name} improve and builds trust in our community.
+            Your feedback helps {shop.business_name} improve and builds trust in our community.
           </p>
           <button
             onClick={() => navigate("/")}
@@ -87,7 +165,7 @@ const RateVendorPage = () => {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-lg font-semibold">Rate {shop.name}</h1>
+            <h1 className="text-lg font-semibold">Rate {shop.business_name}</h1>
           </div>
         </div>
 
@@ -95,11 +173,11 @@ const RateVendorPage = () => {
           {/* Shop preview */}
           <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/50">
             <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center text-lg font-bold">
-              {shop.name.charAt(0)}
+              {shop.business_name.charAt(0)}
             </div>
             <div>
-              <h3 className="font-medium">{shop.name}</h3>
-              <p className="text-sm text-muted-foreground">{shop.category}</p>
+              <h3 className="font-medium">{shop.business_name}</h3>
+              <p className="text-sm text-muted-foreground">{shop.category?.name}</p>
             </div>
           </div>
 
@@ -131,9 +209,23 @@ const RateVendorPage = () => {
             </div>
           </div>
 
-          {/* Text feedback */}
+          {/* Text feedback with AI */}
           <div>
-            <h3 className="font-medium mb-3">Anything else to share? (Optional)</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium">Anything else to share?</h3>
+              <button
+                onClick={generateAIReview}
+                disabled={isGeneratingReview}
+                className="flex items-center gap-1 text-xs text-primary"
+              >
+                {isGeneratingReview ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3 h-3" />
+                )}
+                AI Suggest
+              </button>
+            </div>
             <textarea
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
@@ -145,9 +237,10 @@ const RateVendorPage = () => {
           {/* Submit button */}
           <button
             onClick={handleSubmit}
-            className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity"
+            disabled={isSubmitting}
+            className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            Submit Rating
+            {isSubmitting ? "Submitting..." : "Submit Rating"}
           </button>
         </div>
       </div>
