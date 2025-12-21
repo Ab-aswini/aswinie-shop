@@ -211,7 +211,7 @@ export function MultiImageUpload({
     <div className="space-y-3">
       {/* Image Grid */}
       {images.length > 0 && (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-3">
           {images.map((image, index) => (
             <div
               key={image.id}
@@ -220,49 +220,55 @@ export function MultiImageUpload({
               onDragOver={(e) => handleDragOver(e, index)}
               onDragEnd={handleDragEnd}
               className={cn(
-                "relative aspect-square rounded-lg overflow-hidden border-2 cursor-move group",
-                index === 0 ? "border-primary" : "border-transparent",
-                draggedIndex === index && "opacity-50",
-                enhancingImageId === image.id && "cursor-wait"
+                "relative aspect-square rounded-xl overflow-hidden border-2 group bg-muted",
+                index === 0 ? "border-primary" : "border-border",
+                draggedIndex === index && "opacity-50 scale-95",
+                enhancingImageId === image.id ? "cursor-wait" : "cursor-move",
+                "transition-all duration-200"
               )}
             >
               <img
                 src={image.url}
                 alt={`Product image ${index + 1}`}
                 className={cn(
-                  "w-full h-full object-cover transition-all",
-                  enhancingImageId === image.id && "opacity-50 blur-sm"
+                  "w-full h-full object-cover",
+                  enhancingImageId === image.id && "opacity-40 blur-sm scale-105"
                 )}
               />
               
               {/* Enhancing overlay */}
               {enhancingImageId === image.id && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                  <div className="flex flex-col items-center gap-2 text-white">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span className="text-xs font-medium">Enhancing...</span>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-1.5 text-foreground bg-background/80 rounded-lg px-3 py-2">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    <span className="text-[10px] font-medium">Enhancing...</span>
                   </div>
                 </div>
               )}
               
               {/* Primary Badge */}
-              {index === 0 && (
-                <span className="absolute top-1 left-1 px-1.5 py-0.5 text-[10px] font-medium bg-primary text-primary-foreground rounded">
+              {index === 0 && enhancingImageId !== image.id && (
+                <span className="absolute top-1.5 left-1.5 px-2 py-0.5 text-[10px] font-semibold bg-primary text-primary-foreground rounded-md shadow-sm">
                   Main
                 </span>
               )}
 
               {/* Controls Overlay */}
               {enhancingImageId !== image.id && (
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <div className="text-white">
-                    <GripVertical className="w-5 h-5" />
-                  </div>
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+                    title="Drag to reorder"
+                  >
+                    <GripVertical className="w-4 h-4" />
+                  </button>
                   {enableCropping && (
                     <button
                       type="button"
                       onClick={() => handleEditImage(image)}
-                      className="w-7 h-7 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+                      className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+                      title="Crop image"
                     >
                       <Crop className="w-4 h-4" />
                     </button>
@@ -272,20 +278,21 @@ export function MultiImageUpload({
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
-                          className="w-7 h-7 flex items-center justify-center rounded-full bg-primary/80 text-white hover:bg-primary transition-colors"
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                          title="AI Enhance"
                         >
                           <Sparkles className="w-4 h-4" />
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="center" className="min-w-[160px]">
+                      <DropdownMenuContent align="center" side="top" className="min-w-[160px]">
                         <DropdownMenuItem onClick={() => handleEnhanceImage(image, 'clean-background')}>
-                          Clean Background
+                          🎨 Clean Background
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEnhanceImage(image, 'professional')}>
-                          Professional Look
+                          ✨ Professional Look
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEnhanceImage(image, 'bright-lighting')}>
-                          Bright Lighting
+                          💡 Bright Lighting
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -298,9 +305,10 @@ export function MultiImageUpload({
                 <button
                   type="button"
                   onClick={() => removeImage(image.id)}
-                  className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-1.5 right-1.5 w-6 h-6 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                  title="Remove image"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
