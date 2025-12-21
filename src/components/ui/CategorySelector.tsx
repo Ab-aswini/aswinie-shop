@@ -55,6 +55,7 @@ export function CategorySelector({ value, onChange, type, className }: CategoryS
             <div key={group.id} className="space-y-3">
               {/* Group Header */}
               <button
+                type="button"
                 onClick={() => hasChildren ? toggleGroup(group.id) : onChange(group.slug, group.id)}
                 className={cn(
                   "flex items-center justify-between w-full text-sm font-semibold transition-colors py-2 px-3 rounded-lg",
@@ -100,6 +101,7 @@ export function CategorySelector({ value, onChange, type, className }: CategoryS
                         return (
                           <motion.button
                             key={category.id}
+                            type="button"
                             variants={categoryAnimations.item}
                             onClick={() => onChange(category.slug, category.id)}
                             whileHover={{ scale: 1.02 }}
