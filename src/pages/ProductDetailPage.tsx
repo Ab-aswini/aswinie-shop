@@ -1,12 +1,13 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-import { ArrowLeft, Share2, MapPin, Store, ChevronRight } from "lucide-react";
+import { ArrowLeft, Share2, MapPin, Store, ChevronRight, Sparkles, BadgeCheck } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { WhatsAppCTA } from "@/components/ui/WhatsAppCTA";
 import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 
 interface ProductImage {
   id: string;
@@ -39,6 +40,7 @@ interface ProductWithVendor {
 
 export default function ProductDetailPage() {
   const { productId } = useParams<{ productId: string }>();
+  const navigate = useNavigate();
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', productId],
@@ -94,8 +96,8 @@ export default function ProductDetailPage() {
 
   const formatPrice = (price: number | null, priceMax: number | null) => {
     if (!price) return "Price on request";
-    if (priceMax && priceMax > price) return `₹${price} - ₹${priceMax}`;
-    return `₹${price}`;
+    if (priceMax && priceMax > price) return `₹${price.toLocaleString()} - ₹${priceMax.toLocaleString()}`;
+    return `₹${price.toLocaleString()}`;
   };
 
   const shareProduct = async () => {
@@ -116,11 +118,12 @@ export default function ProductDetailPage() {
     return (
       <AppLayout showHeader={false}>
         <div className="pb-24">
-          <Skeleton className="h-72 w-full" />
-          <div className="px-4 py-4 space-y-4">
-            <Skeleton className="h-8 w-3/4" />
-            <Skeleton className="h-6 w-1/3" />
-            <Skeleton className="h-20 w-full" />
+          <Skeleton className="w-full aspect-[4/5]" />
+          <div className="px-5 py-6 space-y-5">
+            <Skeleton className="h-5 w-20 rounded-full" />
+            <Skeleton className="h-9 w-3/4" />
+            <Skeleton className="h-7 w-1/3" />
+            <Skeleton className="h-24 w-full rounded-xl" />
           </div>
         </div>
       </AppLayout>
@@ -130,11 +133,15 @@ export default function ProductDetailPage() {
   if (!product) {
     return (
       <AppLayout showHeader={false} showNav={false}>
-        <div className="flex flex-col items-center justify-center min-h-screen p-4">
-          <Store className="w-16 h-16 text-muted-foreground mb-4" />
-          <h2 className="text-xl font-bold mb-2">Product not found</h2>
-          <p className="text-muted-foreground mb-4">This product may have been removed.</p>
-          <Link to="/" className="text-primary font-medium">Go back home</Link>
+        <div className="flex flex-col items-center justify-center min-h-screen p-6">
+          <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-6">
+            <Store className="w-10 h-10 text-muted-foreground" />
+          </div>
+          <h2 className="text-2xl font-bold mb-3">Product not found</h2>
+          <p className="text-muted-foreground text-center mb-6">This product may have been removed or is no longer available.</p>
+          <Link to="/" className="px-6 py-3 bg-primary text-primary-foreground rounded-full font-semibold hover:bg-primary/90 transition-colors">
+            Go back home
+          </Link>
         </div>
       </AppLayout>
     );
@@ -156,116 +163,162 @@ export default function ProductDetailPage() {
 
   return (
     <AppLayout showHeader={false}>
-      <div className="pb-24">
+      <div className="pb-28">
         {/* Product Image Gallery */}
         <div className="relative">
           <ProductImageGallery 
             images={allImages} 
             productName={product.name} 
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent pointer-events-none" />
           
-          {/* Navigation */}
+          {/* Premium Navigation Header */}
           <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
-            <Link
-              to={-1 as any}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-card/80 backdrop-blur-sm"
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate(-1)}
+              className="w-11 h-11 flex items-center justify-center rounded-full bg-background/90 backdrop-blur-md shadow-xl border border-border/20"
             >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <button 
+              <ArrowLeft className="w-5 h-5 text-foreground" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={shareProduct}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-card/80 backdrop-blur-sm"
+              className="w-11 h-11 flex items-center justify-center rounded-full bg-background/90 backdrop-blur-md shadow-xl border border-border/20"
             >
-              <Share2 className="w-5 h-5" />
-            </button>
+              <Share2 className="w-5 h-5 text-foreground" />
+            </motion.button>
           </div>
         </div>
 
-        {/* Product Info */}
-        <div className="px-4 py-4 space-y-4">
-          {/* Category */}
+        {/* Product Info - Premium Design */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="px-5 py-6 space-y-5"
+        >
+          {/* Category Badge */}
           {product.category && (
-            <span className="inline-block px-2 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-full">
+            <motion.span 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-secondary text-secondary-foreground rounded-full"
+            >
               {product.category}
-            </span>
+            </motion.span>
           )}
 
-          {/* Name & Price */}
-          <div>
-            <h1 className="text-2xl font-bold">{product.name}</h1>
-            <p className="text-xl font-semibold text-primary mt-1">
+          {/* Name & Price Section */}
+          <div className="space-y-2">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight text-foreground">
+              {product.name}
+            </h1>
+            <p className="text-xl sm:text-2xl font-bold text-primary">
               {formatPrice(product.price, product.price_max)}
             </p>
           </div>
 
           {/* Description */}
           {product.description && (
-            <p className="text-muted-foreground leading-relaxed">
+            <p className="text-muted-foreground text-base leading-relaxed">
               {product.description}
             </p>
           )}
 
           {/* Highlights */}
           {product.highlights && product.highlights.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 pt-1">
               {product.highlights.map((highlight, index) => (
-                <span
+                <motion.span
                   key={index}
-                  className="px-2 py-1 text-xs bg-accent/20 text-accent-foreground rounded-full"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.1 * index }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-full"
                 >
+                  <Sparkles className="w-3 h-3" />
                   {highlight}
-                </span>
+                </motion.span>
               ))}
             </div>
           )}
 
-          {/* Vendor Card */}
+          {/* Premium Vendor Card */}
           {product.vendors && (
-            <Link
-              to={`/shop/${product.vendors.id}`}
-              className="block p-4 rounded-xl bg-card border border-border/50 hover:bg-muted/50 transition-colors"
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
             >
-              <div className="flex items-center gap-3">
-                {product.vendors.logo_url ? (
-                  <img
-                    src={product.vendors.logo_url}
-                    alt={product.vendors.business_name}
-                    className="w-12 h-12 rounded-xl object-cover"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center text-lg font-bold">
-                    {product.vendors.business_name.charAt(0)}
+              <Link
+                to={`/shop/${product.vendors.id}`}
+                className="block p-4 rounded-2xl bg-card border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all duration-300 group"
+              >
+                <div className="flex items-center gap-4">
+                  {/* Vendor Logo */}
+                  <div className="relative">
+                    {product.vendors.logo_url ? (
+                      <img
+                        src={product.vendors.logo_url}
+                        alt={product.vendors.business_name}
+                        className="w-14 h-14 rounded-xl object-cover ring-2 ring-border/30 group-hover:ring-primary/30 transition-all"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-xl font-bold text-primary ring-2 ring-border/30 group-hover:ring-primary/30 transition-all">
+                        {product.vendors.business_name.charAt(0)}
+                      </div>
+                    )}
+                    {product.vendors.is_verified && (
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                        <BadgeCheck className="w-3.5 h-3.5 text-primary-foreground" />
+                      </div>
+                    )}
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold truncate">{product.vendors.business_name}</h3>
-                  {(product.vendors.city || product.vendors.location) && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="w-3 h-3" />
-                      <span className="truncate">{product.vendors.location || product.vendors.city}</span>
-                    </div>
-                  )}
+                  
+                  {/* Vendor Info */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                      {product.vendors.business_name}
+                    </h3>
+                    {(product.vendors.city || product.vendors.location) && (
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5">
+                        <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span className="truncate">{product.vendors.location || product.vendors.city}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Arrow */}
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </div>
-            </Link>
+              </Link>
+            </motion.div>
           )}
 
-          {/* Contact CTA */}
+          {/* Premium Contact CTA */}
           {product.vendors && (
-            <div className="space-y-3">
+            <motion.div 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="pt-2 space-y-3"
+            >
               <WhatsAppCTA
                 phoneNumber={product.vendors.whatsapp_number}
                 message={`Hi! I'm interested in "${product.name}" listed at ${formatPrice(product.price, product.price_max)}. Is it available?`}
-                className="w-full"
+                className="w-full py-4 text-base font-semibold rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300"
               />
               <p className="text-xs text-center text-muted-foreground">
                 Contact the seller directly on WhatsApp
               </p>
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       </div>
     </AppLayout>
   );

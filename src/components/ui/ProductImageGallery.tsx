@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ProductImageGalleryProps {
   images: string[];
@@ -26,17 +27,16 @@ export function ProductImageGallery({ images, productName, className }: ProductI
     setSelectedIndex(emblaApi.selectedScrollSnap());
   }, [emblaApi]);
 
-  // Set up the select callback
-  useState(() => {
+  useEffect(() => {
     if (emblaApi) {
       emblaApi.on("select", onSelect);
       onSelect();
     }
-  });
+  }, [emblaApi, onSelect]);
 
   if (!images.length) {
     return (
-      <div className={cn("w-full h-72 bg-muted flex items-center justify-center", className)}>
+      <div className={cn("w-full aspect-[4/5] bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center", className)}>
         <span className="text-muted-foreground">No images</span>
       </div>
     );
@@ -44,59 +44,72 @@ export function ProductImageGallery({ images, productName, className }: ProductI
 
   if (images.length === 1) {
     return (
-      <img
-        src={images[0]}
-        alt={productName}
-        className={cn("w-full h-72 object-cover", className)}
-      />
+      <div className={cn("relative w-full aspect-[4/5] overflow-hidden", className)}>
+        <img
+          src={images[0]}
+          alt={productName}
+          className="w-full h-full object-cover"
+        />
+        {/* Premium gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/20 pointer-events-none" />
+      </div>
     );
   }
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative w-full aspect-[4/5] overflow-hidden", className)}>
       {/* Main Carousel */}
-      <div ref={emblaRef} className="overflow-hidden">
-        <div className="flex">
+      <div ref={emblaRef} className="overflow-hidden h-full">
+        <div className="flex h-full">
           {images.map((image, index) => (
-            <div key={index} className="flex-[0_0_100%] min-w-0">
+            <div key={index} className="flex-[0_0_100%] min-w-0 h-full">
               <img
                 src={image}
                 alt={`${productName} - Image ${index + 1}`}
-                className="w-full h-72 object-cover"
+                className="w-full h-full object-cover"
               />
             </div>
           ))}
         </div>
       </div>
 
-      {/* Navigation Buttons */}
-      <button
+      {/* Premium gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/20 pointer-events-none" />
+
+      {/* Premium Navigation Buttons */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
         onClick={scrollPrev}
-        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-card/80 backdrop-blur-sm shadow-md hover:bg-card transition-colors"
+        className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full bg-background/90 backdrop-blur-md shadow-xl border border-border/20 hover:bg-background transition-all duration-300"
         aria-label="Previous image"
       >
-        <ChevronLeft className="w-5 h-5" />
-      </button>
-      <button
+        <ChevronLeft className="w-5 h-5 text-foreground" />
+      </motion.button>
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
         onClick={scrollNext}
-        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-card/80 backdrop-blur-sm shadow-md hover:bg-card transition-colors"
+        className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full bg-background/90 backdrop-blur-md shadow-xl border border-border/20 hover:bg-background transition-all duration-300"
         aria-label="Next image"
       >
-        <ChevronRight className="w-5 h-5" />
-      </button>
+        <ChevronRight className="w-5 h-5 text-foreground" />
+      </motion.button>
 
-      {/* Dot Indicators */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+      {/* Premium Dot Indicators */}
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2 px-3 py-2 rounded-full bg-background/70 backdrop-blur-md shadow-lg">
         {images.map((_, index) => (
-          <button
+          <motion.button
             key={index}
             onClick={() => emblaApi?.scrollTo(index)}
             className={cn(
-              "w-2 h-2 rounded-full transition-all",
+              "rounded-full transition-all duration-300",
               index === selectedIndex
-                ? "bg-white w-4"
-                : "bg-white/50 hover:bg-white/75"
+                ? "w-6 h-2.5 bg-primary"
+                : "w-2.5 h-2.5 bg-muted-foreground/40 hover:bg-muted-foreground/60"
             )}
+            whileHover={{ scale: 1.2 }}
+            whileTap={{ scale: 0.9 }}
             aria-label={`Go to image ${index + 1}`}
           />
         ))}
