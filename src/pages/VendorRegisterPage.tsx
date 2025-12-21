@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Store, Phone, MapPin, FileText, ArrowLeft, Upload, CheckCircle, Sparkles, Loader2 } from "lucide-react";
+import { Store, Phone, MapPin, FileText, ArrowLeft, Upload, CheckCircle, Sparkles, Loader2, Navigation, ExternalLink } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 
 export default function VendorRegisterPage() {
@@ -19,6 +19,8 @@ export default function VendorRegisterPage() {
   const { data: categoriesHierarchy } = useCategoriesHierarchy();
   const { toast } = useToast();
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(1);
@@ -60,6 +62,55 @@ export default function VendorRegisterPage() {
       .getPublicUrl(path);
     
     return urlData.publicUrl;
+  };
+
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast({ title: "Geolocation not supported", variant: "destructive" });
+      return;
+    }
+    
+    setIsGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setCoordinates({ lat: latitude, lng: longitude });
+        
+        // Reverse geocode using free Nominatim API
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+          );
+          const data = await res.json();
+          if (data.address) {
+            const city = data.address.city || data.address.town || data.address.village || data.address.district || "";
+            const fullAddress = data.display_name || "";
+            setFormData(prev => ({
+              ...prev,
+              city: city,
+              location: fullAddress,
+            }));
+            toast({ title: "Location detected!" });
+          }
+        } catch {
+          toast({ title: "Could not get address", variant: "destructive" });
+        }
+        setIsGettingLocation(false);
+      },
+      (error) => {
+        toast({ title: "Location access denied", description: error.message, variant: "destructive" });
+        setIsGettingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const openGoogleMaps = () => {
+    if (coordinates) {
+      window.open(`https://www.google.com/maps?q=${coordinates.lat},${coordinates.lng}`, '_blank');
+    } else if (formData.location) {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.location)}`, '_blank');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -319,6 +370,22 @@ export default function VendorRegisterPage() {
                   </div>
                 </div>
 
+                {/* Location Detection Button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={getCurrentLocation}
+                  disabled={isGettingLocation}
+                >
+                  {isGettingLocation ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Navigation className="w-4 h-4" />
+                  )}
+                  {isGettingLocation ? "Detecting location..." : "Use My Current Location"}
+                </Button>
+
                 <div className="space-y-2">
                   <Label htmlFor="city">City</Label>
                   <Input
@@ -330,7 +397,21 @@ export default function VendorRegisterPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="location">Full Address</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="location">Full Address</Label>
+                    {(coordinates || formData.location) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-primary gap-1"
+                        onClick={openGoogleMaps}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        View on Maps
+                      </Button>
+                    )}
+                  </div>
                   <Textarea
                     id="location"
                     placeholder="Shop address for customers to visit..."
