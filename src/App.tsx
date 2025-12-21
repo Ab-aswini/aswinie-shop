@@ -19,6 +19,7 @@ import AuthPage from "./pages/AuthPage";
 // Vendor Pages
 import VendorDashboard from "./pages/VendorDashboard";
 import VendorRegisterPage from "./pages/VendorRegisterPage";
+import VendorShopEditorPage from "./pages/VendorShopEditorPage";
 import AIStudioPage from "./pages/AIStudioPage";
 import ProductCreatePage from "./pages/ProductCreatePage";
 import ProductEditPage from "./pages/ProductEditPage";
@@ -121,6 +122,11 @@ const App = () => (
             <Route path="/vendor/analytics" element={
               <ProtectedRoute requiredRole="vendor">
                 <VendorAnalyticsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/vendor/shop/edit" element={
+              <ProtectedRoute requiredRole="vendor">
+                <VendorShopEditorPage />
               </ProtectedRoute>
             } />
             

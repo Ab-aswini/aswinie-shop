@@ -11,7 +11,8 @@ import {
   BarChart3,
   AlertCircle,
   CheckCircle,
-  Loader2
+  Loader2,
+  Edit
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -75,6 +76,7 @@ const VendorDashboard = () => {
   ];
 
   const menuItems = [
+    { icon: Edit, label: "Edit Shop Details", path: "/vendor/shop/edit" },
     { icon: Package, label: "My Products", path: "/vendor/products", count: vendor?.totalProducts },
     { icon: BarChart3, label: "Analytics", path: "/vendor/analytics" },
     { icon: Eye, label: "Portfolio Preview", path: `/shop/${vendor?.id}` },
