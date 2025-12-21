@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Upload, Sparkles, Loader2, Wand2, ImagePlus, Trash2 } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, ImagePlus } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MultiImageUpload } from "@/components/ui/MultiImageUpload";
 
 interface Product {
   id: string;
@@ -24,6 +25,14 @@ interface Product {
   vendor_id: string;
 }
 
+interface ImageItem {
+  id: string;
+  url: string;
+  file?: File;
+  isNew?: boolean;
+  dbId?: string; // ID from product_images table
+}
+
 export default function ProductEditPage() {
   const navigate = useNavigate();
   const { productId } = useParams();
@@ -33,7 +42,6 @@ export default function ProductEditPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isEnhancing, setIsEnhancing] = useState(false);
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -44,12 +52,10 @@ export default function ProductEditPage() {
     category: "",
   });
   
-  const [productImage, setProductImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [enhancedImage, setEnhancedImage] = useState<string | null>(null);
-  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
+  const [productImages, setProductImages] = useState<ImageItem[]>([]);
+  const [originalImageIds, setOriginalImageIds] = useState<string[]>([]);
 
-  // Fetch product data
+  // Fetch product data and images
   useEffect(() => {
     async function fetchProduct() {
       if (!user || !productId) return;
@@ -67,19 +73,29 @@ export default function ProductEditPage() {
         return;
       }
 
-      // Fetch product
-      const { data: productData, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', productId)
-        .eq('vendor_id', vendor.id)
-        .maybeSingle();
+      // Fetch product and images in parallel
+      const [productResult, imagesResult] = await Promise.all([
+        supabase
+          .from('products')
+          .select('*')
+          .eq('id', productId)
+          .eq('vendor_id', vendor.id)
+          .maybeSingle(),
+        supabase
+          .from('product_images')
+          .select('*')
+          .eq('product_id', productId)
+          .order('display_order', { ascending: true }),
+      ]);
 
-      if (error || !productData) {
+      if (productResult.error || !productResult.data) {
         toast({ title: "Product not found", variant: "destructive" });
         navigate("/vendor/products");
         return;
       }
+
+      const productData = productResult.data;
+      const existingImages = imagesResult.data || [];
 
       setProduct(productData);
       setFormData({
@@ -89,7 +105,27 @@ export default function ProductEditPage() {
         priceMax: productData.price_max?.toString() || "",
         category: productData.category || "",
       });
-      setExistingImageUrl(productData.enhanced_image_url || productData.original_image_url);
+
+      // Load existing images from product_images table
+      if (existingImages.length > 0) {
+        const images: ImageItem[] = existingImages.map((img) => ({
+          id: img.id,
+          url: img.image_url,
+          dbId: img.id,
+        }));
+        setProductImages(images);
+        setOriginalImageIds(existingImages.map((img) => img.id));
+      } else if (productData.enhanced_image_url || productData.original_image_url) {
+        // Fallback to legacy single image
+        const legacyUrl = productData.enhanced_image_url || productData.original_image_url;
+        if (legacyUrl) {
+          setProductImages([{
+            id: 'legacy',
+            url: legacyUrl,
+          }]);
+        }
+      }
+
       setIsLoading(false);
     }
 
@@ -103,42 +139,6 @@ export default function ProductEditPage() {
       navigate("/auth");
     }
   }, [user, authLoading, navigate]);
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setProductImage(file);
-      setEnhancedImage(null);
-      const reader = new FileReader();
-      reader.onload = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const enhanceWithAI = async () => {
-    if (!imagePreview) return;
-    
-    setIsEnhancing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('ai-assist', {
-        body: {
-          type: 'enhance-product-image',
-          imageBase64: imagePreview,
-        },
-      });
-      
-      if (error) throw error;
-      
-      if (data?.enhancedImage) {
-        setEnhancedImage(data.enhancedImage);
-        toast({ title: "Image enhanced!" });
-      }
-    } catch (e) {
-      toast({ title: "Enhancement failed", variant: "destructive" });
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
 
   const generateDescription = async () => {
     if (!formData.name) {
@@ -168,20 +168,6 @@ export default function ProductEditPage() {
     }
   };
 
-  const uploadImage = async (file: File, path: string) => {
-    const { data, error } = await supabase.storage
-      .from('product-images')
-      .upload(path, file, { upsert: true });
-    
-    if (error) throw error;
-    
-    const { data: urlData } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(path);
-    
-    return urlData.publicUrl;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -193,45 +179,90 @@ export default function ProductEditPage() {
     setIsSubmitting(true);
 
     try {
-      let originalImageUrl = product.original_image_url;
-      let enhancedImageUrl = product.enhanced_image_url;
-
-      // Upload new original image if changed
-      if (productImage) {
-        const path = `${product.vendor_id}/${Date.now()}-original.${productImage.name.split('.').pop()}`;
-        originalImageUrl = await uploadImage(productImage, path);
-        enhancedImageUrl = originalImageUrl; // Reset enhanced if new original
-      }
-
-      // Upload enhanced image if exists
-      if (enhancedImage) {
-        const response = await fetch(enhancedImage);
-        const blob = await response.blob();
-        const path = `${product.vendor_id}/${Date.now()}-enhanced.png`;
-        const { error } = await supabase.storage
-          .from('product-images')
-          .upload(path, blob, { upsert: true });
-        
-        if (!error) {
-          const { data: urlData } = supabase.storage
-            .from('product-images')
-            .getPublicUrl(path);
-          enhancedImageUrl = urlData.publicUrl;
-        }
-      }
-
-      // Update product
-      const { error } = await supabase.from('products').update({
+      // Update product details
+      const { error: updateError } = await supabase.from('products').update({
         name: formData.name,
         description: formData.description || null,
         price: formData.price ? parseFloat(formData.price) : null,
         price_max: formData.priceMax ? parseFloat(formData.priceMax) : null,
         category: formData.category || null,
-        original_image_url: originalImageUrl,
-        enhanced_image_url: enhancedImageUrl,
       }).eq('id', product.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Find deleted images (were in original but not in current)
+      const currentDbIds = productImages
+        .filter(img => img.dbId)
+        .map(img => img.dbId!);
+      const deletedImageIds = originalImageIds.filter(id => !currentDbIds.includes(id));
+
+      // Delete removed images from database
+      if (deletedImageIds.length > 0) {
+        await supabase
+          .from('product_images')
+          .delete()
+          .in('id', deletedImageIds);
+      }
+
+      // Upload new images and create records
+      const newImages = productImages.filter(img => img.isNew && img.file);
+      const uploadPromises = newImages.map(async (image, index) => {
+        if (!image.file) return null;
+        
+        const displayOrder = productImages.findIndex(img => img.id === image.id);
+        const path = `${product.vendor_id}/${product.id}/${Date.now()}-${index}.${image.file.name.split('.').pop()}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(path, image.file, { upsert: true });
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: urlData } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(path);
+        
+        return {
+          product_id: product.id,
+          image_url: urlData.publicUrl,
+          display_order: displayOrder,
+          is_primary: displayOrder === 0,
+        };
+      });
+
+      const newImageRecords = (await Promise.all(uploadPromises)).filter(Boolean);
+      
+      if (newImageRecords.length > 0) {
+        const { error: insertError } = await supabase
+          .from('product_images')
+          .insert(newImageRecords);
+        
+        if (insertError) throw insertError;
+      }
+
+      // Update display_order for existing images that were reordered
+      const existingImages = productImages.filter(img => img.dbId && !img.isNew);
+      for (let i = 0; i < existingImages.length; i++) {
+        const img = existingImages[i];
+        const newOrder = productImages.findIndex(pImg => pImg.id === img.id);
+        await supabase
+          .from('product_images')
+          .update({ display_order: newOrder, is_primary: newOrder === 0 })
+          .eq('id', img.dbId);
+      }
+
+      // Update legacy image URL for backwards compatibility
+      const firstImage = productImages[0];
+      if (firstImage) {
+        let primaryUrl = firstImage.url;
+        if (firstImage.isNew && newImageRecords[0]) {
+          primaryUrl = (newImageRecords[0] as any).image_url;
+        }
+        await supabase.from('products').update({
+          original_image_url: primaryUrl,
+          enhanced_image_url: primaryUrl,
+        }).eq('id', product.id);
+      }
 
       toast({ title: "Product updated!" });
       navigate("/vendor/products");
@@ -240,12 +271,6 @@ export default function ProductEditPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const removeImage = () => {
-    setProductImage(null);
-    setImagePreview(null);
-    setEnhancedImage(null);
   };
 
   if (authLoading || isLoading) {
@@ -259,8 +284,6 @@ export default function ProductEditPage() {
       </AppLayout>
     );
   }
-
-  const displayImage = enhancedImage || imagePreview || existingImageUrl;
 
   return (
     <AppLayout showNav={false}>
@@ -282,68 +305,17 @@ export default function ProductEditPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ImagePlus className="w-5 h-5" />
-                Product Image
+                Product Images
               </CardTitle>
-              <CardDescription>Update or enhance with AI</CardDescription>
+              <CardDescription>Upload up to 5 photos</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div 
-                className="border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary/50 transition-colors relative"
-                onClick={() => document.getElementById('product-image')?.click()}
-              >
-                {displayImage ? (
-                  <>
-                    <img src={displayImage} alt="Preview" className="w-full h-48 object-contain rounded-lg" />
-                    {(imagePreview || existingImageUrl) && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2 h-8 w-8"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeImage();
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">Tap to upload product photo</p>
-                  </>
-                )}
-                <input
-                  id="product-image"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageChange}
-                />
-              </div>
-
-              {imagePreview && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={enhanceWithAI}
-                  disabled={isEnhancing}
-                >
-                  {isEnhancing ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Wand2 className="w-4 h-4" />
-                  )}
-                  {isEnhancing ? "Enhancing..." : "AI Enhance Image"}
-                </Button>
-              )}
-
-              {enhancedImage && (
-                <p className="text-xs text-center text-primary">✓ AI enhanced image ready</p>
-              )}
+            <CardContent>
+              <MultiImageUpload
+                images={productImages}
+                onImagesChange={setProductImages}
+                maxImages={5}
+                isUploading={isSubmitting}
+              />
             </CardContent>
           </Card>
 
