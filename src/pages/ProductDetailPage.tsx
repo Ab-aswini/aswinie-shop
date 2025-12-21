@@ -4,6 +4,7 @@ import { ArrowLeft, Share2, MapPin, Store, ChevronRight, Sparkles, BadgeCheck } 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { WhatsAppCTA } from "@/components/ui/WhatsAppCTA";
 import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
+import { RelatedProducts } from "@/components/ui/RelatedProducts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -316,6 +317,23 @@ export default function ProductDetailPage() {
               <p className="text-xs text-center text-muted-foreground">
                 Contact the seller directly on WhatsApp
               </p>
+            </motion.div>
+          )}
+
+          {/* Related Products Section */}
+          {product.vendors && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.4 }}
+              className="pt-6 border-t border-border/50"
+            >
+              <RelatedProducts
+                currentProductId={product.id}
+                vendorId={product.vendor_id}
+                category={product.category}
+                vendorName={product.vendors.business_name}
+              />
             </motion.div>
           )}
         </motion.div>
