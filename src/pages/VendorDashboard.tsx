@@ -6,7 +6,8 @@ import {
   Share2, 
   TrendingUp,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  BarChart3
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -46,6 +47,7 @@ const VendorDashboard = () => {
 
   const menuItems = [
     { icon: Package, label: "My Products", path: "/vendor/products", count: vendor.totalProducts },
+    { icon: BarChart3, label: "Analytics", path: "/vendor/analytics" },
     { icon: Eye, label: "Portfolio Preview", path: "/vendor/portfolio" },
     { icon: Star, label: "Ratings Received", path: "/vendor/ratings", count: vendor.pendingRatings },
     { icon: Share2, label: "Share Shop Link", path: "/vendor/share" },
