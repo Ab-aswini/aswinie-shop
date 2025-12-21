@@ -213,6 +213,14 @@ export default function VendorProductsPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
+                        onClick={() => navigate(`/vendor/product/${product.id}/edit`)}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
                         onClick={() => toggleActive(product)}
                         disabled={togglingId === product.id}
                       >
