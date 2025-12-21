@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, LayoutGrid } from "lucide-react";
+import { ChevronDown, LayoutGrid, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,9 +24,19 @@ export default function CategoryFilter({
   showCard = true,
 }: CategoryFilterProps) {
   const { data: categories, isLoading } = useCategoriesHierarchy(type);
-  const [openGroups, setOpenGroups] = useState<string[]>(
-    categories?.map(g => g.id) || []
-  );
+  const [openGroups, setOpenGroups] = useState<string[]>([]);
+
+  // Auto-expand group that contains the selected category
+  useEffect(() => {
+    if (categories && selectedCategory && selectedCategory !== 'all') {
+      const parentGroup = categories.find(group => 
+        group.children?.some(child => child.slug === selectedCategory)
+      );
+      if (parentGroup && !openGroups.includes(parentGroup.id)) {
+        setOpenGroups(prev => [...prev, parentGroup.id]);
+      }
+    }
+  }, [categories, selectedCategory]);
 
   const toggleGroup = (groupId: string) => {
     setOpenGroups(prev =>
@@ -40,15 +50,17 @@ export default function CategoryFilter({
   const CategoryButton = ({ 
     category, 
     slug, 
-    name 
+    name,
+    isSubCategory = false,
   }: { 
     category?: { id: string; slug: string; name: string }; 
     slug?: string; 
     name?: string;
+    isSubCategory?: boolean;
   }) => {
     const categorySlug = category?.slug || slug || 'all';
     const categoryName = category?.name || name || 'All';
-    const Icon = getCategoryIcon(categorySlug);
+    const Icon = isSubCategory ? MoreHorizontal : getCategoryIcon(categorySlug);
     const active = selectedCategory === categorySlug;
 
     return (
@@ -59,11 +71,11 @@ export default function CategoryFilter({
         className={cn(
           "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors text-sm",
           active
-            ? "bg-primary text-primary-foreground"
+            ? "bg-primary text-primary-foreground font-medium"
             : "hover:bg-accent text-foreground"
         )}
       >
-        <Icon className="w-4 h-4 flex-shrink-0" />
+        <Icon className={cn("flex-shrink-0", isSubCategory ? "w-3 h-3" : "w-4 h-4")} />
         <span className="truncate">{categoryName}</span>
       </motion.button>
     );
@@ -78,10 +90,10 @@ export default function CategoryFilter({
           ))}
         </div>
       ) : (
-        <ScrollArea className="h-[500px]">
+        <ScrollArea className="h-[400px] md:h-[500px]">
           <div className="space-y-1 pr-4">
             {/* "All" option always visible */}
-            <div className="mb-2">
+            <div className="mb-3">
               <CategoryButton slug="all" name="All Categories" />
             </div>
 
@@ -90,34 +102,37 @@ export default function CategoryFilter({
               const GroupIcon = getCategoryIcon(group.slug);
               const isOpen = openGroups.includes(group.id);
               const hasChildren = group.children && group.children.length > 0;
+              const isParentSelected = selectedCategory === group.slug;
+              const hasSelectedChild = group.children?.some(c => c.slug === selectedCategory);
 
               return (
-                <div key={group.id} className="mb-2">
+                <div key={group.id} className="mb-1">
                   {/* Group header / Parent category button */}
-                  <div className="flex items-center">
-                    {hasChildren ? (
-                      <button
-                        onClick={() => toggleGroup(group.id)}
-                        className={cn(
-                          "flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors",
-                          "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <GroupIcon className="w-3.5 h-3.5" />
-                          <span>{group.name}</span>
-                        </div>
-                        <motion.div
-                          animate={{ rotate: isOpen ? 180 : 0 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <ChevronDown className="w-4 h-4" />
-                        </motion.div>
-                      </button>
-                    ) : (
-                      <CategoryButton category={group} />
+                  <button
+                    onClick={() => hasChildren ? toggleGroup(group.id) : onSelectCategory(group.slug)}
+                    className={cn(
+                      "flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                      isParentSelected
+                        ? "bg-primary text-primary-foreground"
+                        : hasSelectedChild
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                     )}
-                  </div>
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <GroupIcon className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{group.name}</span>
+                    </div>
+                    {hasChildren && (
+                      <motion.div
+                        animate={{ rotate: isOpen ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex-shrink-0 ml-2"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </motion.div>
+                    )}
+                  </button>
 
                   {/* Child categories */}
                   <AnimatePresence initial={false}>
@@ -133,14 +148,14 @@ export default function CategoryFilter({
                           variants={categoryAnimations.container}
                           initial="hidden"
                           animate="show"
-                          className="pl-4 mt-1 space-y-0.5"
+                          className="pl-4 mt-1 space-y-0.5 border-l-2 border-border ml-5"
                         >
                           {group.children?.map((category) => (
                             <motion.div
                               key={category.id}
                               variants={categoryAnimations.item}
                             >
-                              <CategoryButton category={category} />
+                              <CategoryButton category={category} isSubCategory />
                             </motion.div>
                           ))}
                         </motion.div>

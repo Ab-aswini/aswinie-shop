@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { ArrowLeft, Clock, Sparkles, Loader2, Filter, X } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { ArrowLeft, Clock, Sparkles, Loader2, Filter, X, ArrowUpDown, Star, TrendingUp } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SearchBar } from "@/components/ui/SearchBar";
@@ -9,12 +9,17 @@ import CategoryFilter from "@/components/ui/CategoryFilter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CategorySlider } from "@/components/ui/CategorySlider";
+
+type SortOption = 'relevance' | 'newest' | 'rating' | 'price_low' | 'price_high';
 
 const SearchPage = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [sortBy, setSortBy] = useState<SortOption>('relevance');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [shops, setShops] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -42,14 +47,10 @@ const SearchPage = () => {
           .from('vendors')
           .select('*, category:categories(name, slug, icon)')
           .eq('is_approved', true)
-          .limit(10);
+          .limit(20);
 
         if (query.trim()) {
           vendorQuery = vendorQuery.or(`business_name.ilike.%${query}%,description.ilike.%${query}%`);
-        }
-
-        if (selectedCategory !== 'all') {
-          vendorQuery = vendorQuery.eq('category.slug', selectedCategory);
         }
 
         // Build product query
@@ -57,7 +58,7 @@ const SearchPage = () => {
           .from('products')
           .select('*, vendor:vendors(business_name)')
           .eq('is_active', true)
-          .limit(10);
+          .limit(20);
 
         if (query.trim()) {
           productQuery = productQuery.or(`name.ilike.%${query}%,description.ilike.%${query}%`);
@@ -72,7 +73,7 @@ const SearchPage = () => {
           productQuery
         ]);
 
-        // Filter vendors by category slug if needed (since eq on nested field may not work)
+        // Filter vendors by category slug if needed
         const filteredVendors = selectedCategory !== 'all' 
           ? (vendorData || []).filter(v => v.category?.slug === selectedCategory)
           : vendorData || [];
@@ -88,6 +89,37 @@ const SearchPage = () => {
 
     return () => clearTimeout(searchTimeout);
   }, [query, selectedCategory]);
+
+  // Sort results
+  const sortedShops = useMemo(() => {
+    if (!shops.length) return [];
+    return [...shops].sort((a, b) => {
+      switch (sortBy) {
+        case 'rating':
+          return (b.avg_rating || 0) - (a.avg_rating || 0);
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        default:
+          return 0;
+      }
+    });
+  }, [shops, sortBy]);
+
+  const sortedProducts = useMemo(() => {
+    if (!products.length) return [];
+    return [...products].sort((a, b) => {
+      switch (sortBy) {
+        case 'price_low':
+          return (a.price || 0) - (b.price || 0);
+        case 'price_high':
+          return (b.price || 0) - (a.price || 0);
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        default:
+          return 0;
+      }
+    });
+  }, [products, sortBy]);
 
   // Get AI suggestions when no results
   useEffect(() => {
@@ -129,6 +161,16 @@ const SearchPage = () => {
     setIsFilterOpen(false);
   };
 
+  const getSortLabel = () => {
+    switch (sortBy) {
+      case 'rating': return 'Top Rated';
+      case 'newest': return 'Newest';
+      case 'price_low': return 'Price: Low';
+      case 'price_high': return 'Price: High';
+      default: return 'Relevance';
+    }
+  };
+
   return (
     <AppLayout showHeader={false}>
       <div className="flex min-h-[calc(100vh-4rem)]">
@@ -146,10 +188,10 @@ const SearchPage = () => {
         {/* Main Content */}
         <div className="flex-1 px-4 py-4 space-y-4">
           {/* Search header */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => navigate(-1)}
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-muted transition-colors shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -165,14 +207,14 @@ const SearchPage = () => {
             {isMobile && (
               <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="secondary" size="icon" className="relative shrink-0">
-                    <Filter className="w-5 h-5" />
+                  <Button variant="outline" size="icon" className="relative h-9 w-9 shrink-0">
+                    <Filter className="w-4 h-4" />
                     {selectedCategory !== 'all' && (
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full" />
                     )}
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-80 p-0">
+                <SheetContent side="right" className="w-[85vw] max-w-sm p-0">
                   <SheetHeader className="p-4 border-b border-border">
                     <SheetTitle className="flex items-center justify-between">
                       Filter by Category
@@ -183,12 +225,12 @@ const SearchPage = () => {
                           onClick={() => handleCategorySelect('all')}
                           className="text-xs"
                         >
-                          Clear filter
+                          Clear
                         </Button>
                       )}
                     </SheetTitle>
                   </SheetHeader>
-                  <div className="p-4">
+                  <div className="p-4 overflow-y-auto max-h-[calc(100vh-80px)]">
                     <CategoryFilter
                       selectedCategory={selectedCategory}
                       onSelectCategory={handleCategorySelect}
@@ -201,19 +243,48 @@ const SearchPage = () => {
             )}
           </div>
 
-          {/* Active filter indicator */}
-          {selectedCategory !== 'all' && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Filtering:</span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1"
-                onClick={() => setSelectedCategory('all')}
-              >
-                {selectedCategory.replace(/-/g, ' ')}
-                <X className="w-3 h-3" />
-              </Button>
+          {/* Mobile Category Slider */}
+          {isMobile && (query || selectedCategory !== 'all') && (
+            <CategorySlider
+              selected={selectedCategory}
+              onSelect={handleCategorySelect}
+              type="product"
+            />
+          )}
+
+          {/* Sort + Active filter indicator */}
+          {(query || selectedCategory !== 'all') && !isSearching && (
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">
+                  {sortedShops.length + sortedProducts.length} results
+                </p>
+                {selectedCategory !== 'all' && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-6 text-xs gap-1 rounded-full"
+                    onClick={() => setSelectedCategory('all')}
+                  >
+                    {selectedCategory.replace(/-/g, ' ')}
+                    <X className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
+              
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                <SelectTrigger className="w-[120px] h-8 text-xs">
+                  <ArrowUpDown className="w-3 h-3 mr-1" />
+                  <SelectValue>{getSortLabel()}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="relevance">Relevance</SelectItem>
+                  <SelectItem value="newest">Newest</SelectItem>
+                  <SelectItem value="rating">Top Rated</SelectItem>
+                  <SelectItem value="price_low">Price: Low to High</SelectItem>
+                  <SelectItem value="price_high">Price: High to Low</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           )}
 
@@ -243,18 +314,13 @@ const SearchPage = () => {
           ) : (
             /* Search results */
             <div className="space-y-6">
-              {/* Results count */}
-              <p className="text-sm text-muted-foreground">
-                {shops.length + products.length} results found
-              </p>
-
-              {shops.length > 0 && (
+              {sortedShops.length > 0 && (
                 <section>
                   <h3 className="text-sm font-medium text-muted-foreground mb-3">
-                    Shops ({shops.length})
+                    Shops ({sortedShops.length})
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {shops.map((shop) => (
+                    {sortedShops.map((shop) => (
                       <ShopCard
                         key={shop.id}
                         id={shop.id}
@@ -268,13 +334,13 @@ const SearchPage = () => {
                 </section>
               )}
 
-              {products.length > 0 && (
+              {sortedProducts.length > 0 && (
                 <section>
                   <h3 className="text-sm font-medium text-muted-foreground mb-3">
-                    Products ({products.length})
+                    Products ({sortedProducts.length})
                   </h3>
                   <div className="grid gap-2 md:grid-cols-2">
-                    {products.map((product) => (
+                    {sortedProducts.map((product) => (
                       <Link
                         key={product.id}
                         to={`/product/${product.id}`}
@@ -300,7 +366,7 @@ const SearchPage = () => {
                 </section>
               )}
 
-              {shops.length === 0 && products.length === 0 && (
+              {sortedShops.length === 0 && sortedProducts.length === 0 && (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground mb-4">
                     No results {query ? `for "${query}"` : 'in this category'}
