@@ -8,16 +8,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Sparkles, Loader2, ImagePlus, Tag } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, ImagePlus, Tag, AlertCircle } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { MultiImageUpload } from "@/components/ui/MultiImageUpload";
 import { CategorySelector } from "@/components/ui/CategorySelector";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ImageItem {
   id: string;
   url: string;
   file?: File;
   isNew?: boolean;
+}
+
+interface FormErrors {
+  name?: string;
+  images?: string;
+  price?: string;
 }
 
 export default function ProductCreatePage() {
@@ -28,6 +35,8 @@ export default function ProductCreatePage() {
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   
   const [formData, setFormData] = useState({
     name: "",
@@ -40,6 +49,42 @@ export default function ProductCreatePage() {
   
   const [selectedCategorySlug, setSelectedCategorySlug] = useState("");
   const [productImages, setProductImages] = useState<ImageItem[]>([]);
+
+  // Validation function
+  const validateForm = (): FormErrors => {
+    const newErrors: FormErrors = {};
+    
+    if (!formData.name.trim()) {
+      newErrors.name = "Product name is required";
+    } else if (formData.name.trim().length < 3) {
+      newErrors.name = "Product name must be at least 3 characters";
+    }
+    
+    if (productImages.length === 0) {
+      newErrors.images = "At least one product image is required";
+    }
+    
+    if (formData.price && parseFloat(formData.price) < 0) {
+      newErrors.price = "Price cannot be negative";
+    }
+    
+    if (formData.priceMax && formData.price && parseFloat(formData.priceMax) < parseFloat(formData.price)) {
+      newErrors.price = "Max price must be greater than min price";
+    }
+    
+    return newErrors;
+  };
+
+  // Update errors when form data changes
+  useEffect(() => {
+    if (Object.keys(touched).length > 0) {
+      setErrors(validateForm());
+    }
+  }, [formData, productImages, touched]);
+
+  const handleBlur = (field: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
 
   // Check if user is a vendor
   useEffect(() => {
@@ -98,8 +143,24 @@ export default function ProductCreatePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!vendorId || !formData.name) {
-      toast({ title: "Missing information", variant: "destructive" });
+    // Mark all fields as touched
+    setTouched({ name: true, images: true, price: true });
+    
+    // Validate form
+    const formErrors = validateForm();
+    setErrors(formErrors);
+    
+    if (Object.keys(formErrors).length > 0) {
+      toast({ 
+        title: "Please fix the errors", 
+        description: "Some required fields are missing or invalid.",
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (!vendorId) {
+      toast({ title: "Missing vendor information", variant: "destructive" });
       return;
     }
 
@@ -111,8 +172,8 @@ export default function ProductCreatePage() {
         .from('products')
         .insert({
           vendor_id: vendorId,
-          name: formData.name,
-          description: formData.description || null,
+          name: formData.name.trim(),
+          description: formData.description?.trim() || null,
           price: formData.price ? parseFloat(formData.price) : null,
           price_max: formData.priceMax ? parseFloat(formData.priceMax) : null,
           category: selectedCategorySlug || formData.category || null,
@@ -169,7 +230,7 @@ export default function ProductCreatePage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
   if (loading) {
     return (
@@ -195,25 +256,35 @@ export default function ProductCreatePage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Image Upload */}
-          <Card>
+          <Card className={errors.images && touched.images ? "border-destructive" : ""}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ImagePlus className="w-5 h-5" />
-                Product Images
+                Product Images *
               </CardTitle>
-              <CardDescription>Upload up to 5 photos</CardDescription>
+              <CardDescription>Upload up to 5 photos (1:1 square ratio)</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <MultiImageUpload
                 images={productImages}
-                onImagesChange={setProductImages}
+                onImagesChange={(images) => {
+                  setProductImages(images);
+                  setTouched(prev => ({ ...prev, images: true }));
+                }}
                 maxImages={5}
                 isUploading={isSubmitting}
+                enableCropping={true}
+                aspectRatio={1}
               />
+              {errors.images && touched.images && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{errors.images}</AlertDescription>
+                </Alert>
+              )}
             </CardContent>
           </Card>
 
-          {/* Product Details */}
           <Card>
             <CardHeader>
               <CardTitle>Product Details</CardTitle>
@@ -226,8 +297,16 @@ export default function ProductCreatePage() {
                   placeholder="e.g., Cotton Saree, Mobile Cover"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onBlur={() => handleBlur('name')}
+                  className={errors.name && touched.name ? "border-destructive" : ""}
                   required
                 />
+                {errors.name && touched.name && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.name}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -265,8 +344,11 @@ export default function ProductCreatePage() {
                     id="price"
                     type="number"
                     placeholder="Min price"
+                    min="0"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    onBlur={() => handleBlur('price')}
+                    className={errors.price && touched.price ? "border-destructive" : ""}
                   />
                 </div>
                 <div className="space-y-2">
@@ -275,11 +357,19 @@ export default function ProductCreatePage() {
                     id="priceMax"
                     type="number"
                     placeholder="Optional"
+                    min="0"
                     value={formData.priceMax}
                     onChange={(e) => setFormData({ ...formData, priceMax: e.target.value })}
+                    onBlur={() => handleBlur('price')}
                   />
                 </div>
               </div>
+              {errors.price && touched.price && (
+                <p className="text-sm text-destructive flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.price}
+                </p>
+              )}
             </CardContent>
           </Card>
 
