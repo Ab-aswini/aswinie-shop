@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Store, Phone, MapPin, FileText, ArrowLeft, Upload, CheckCircle, Sparkles, Loader2, Navigation, ExternalLink } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { MiniMap } from "@/components/ui/MiniMap";
 
 export default function VendorRegisterPage() {
   const navigate = useNavigate();
@@ -420,6 +421,14 @@ export default function VendorRegisterPage() {
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   />
                 </div>
+
+                {/* Mini Map Preview */}
+                {coordinates && (
+                  <div className="space-y-2">
+                    <Label>Location Preview</Label>
+                    <MiniMap lat={coordinates.lat} lng={coordinates.lng} className="h-32 border border-border" />
+                  </div>
+                )}
 
                 <div className="flex gap-3">
                   <Button type="button" variant="outline" onClick={() => setStep(1)} className="flex-1">
