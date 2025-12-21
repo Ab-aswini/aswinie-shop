@@ -201,11 +201,27 @@ export default function VendorRegisterPage() {
 
       navigate("/vendor/dashboard");
     } catch (error: any) {
-      toast({
-        title: "Registration Failed",
-        description: error.message || "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
+      // Check for unique constraint violation (duplicate user_id)
+      const isDuplicateError = 
+        error.code === '23505' || 
+        error.message?.includes('vendors_user_id_unique') ||
+        error.message?.includes('duplicate key') ||
+        error.message?.includes('unique constraint');
+      
+      if (isDuplicateError) {
+        toast({
+          title: "Already Registered",
+          description: "You already have a vendor account registered. Redirecting to your dashboard...",
+          variant: "destructive",
+        });
+        setTimeout(() => navigate("/vendor/dashboard"), 2000);
+      } else {
+        toast({
+          title: "Registration Failed",
+          description: error.message || "Something went wrong. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
