@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { 
@@ -12,7 +12,8 @@ import {
   Clock,
   ArrowLeft,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Eye
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,12 +22,17 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
+import { VendorDetailsModal } from "@/components/admin/VendorDetailsModal";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, isAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  const [selectedVendor, setSelectedVendor] = useState<any>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useAdminStats();
   const { data: pendingVendors, isLoading: vendorsLoading, refetch: refetchVendors } = usePendingVendors();
@@ -47,25 +53,40 @@ const AdminDashboard = () => {
   }, [user, authLoading, isAdmin, navigate, toast]);
 
   const handleApprove = async (vendorId: string, vendorName: string) => {
+    setActionLoading(true);
     try {
       await approveVendor(vendorId);
       toast({ title: "Vendor Approved", description: `${vendorName} has been approved.` });
       queryClient.invalidateQueries({ queryKey: ['pending-vendors'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      setModalOpen(false);
+      setSelectedVendor(null);
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleReject = async (vendorId: string, vendorName: string) => {
+    setActionLoading(true);
     try {
       await rejectVendor(vendorId);
       toast({ title: "Vendor Rejected", description: `${vendorName} has been rejected.` });
       queryClient.invalidateQueries({ queryKey: ['pending-vendors'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      setModalOpen(false);
+      setSelectedVendor(null);
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setActionLoading(false);
     }
+  };
+
+  const openVendorDetails = (vendor: any) => {
+    setSelectedVendor(vendor);
+    setModalOpen(true);
   };
 
   const handleRefresh = () => {
@@ -159,7 +180,7 @@ const AdminDashboard = () => {
                   className="p-4 rounded-xl bg-card border border-border/50"
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-medium">{vendor.business_name}</h3>
                       <p className="text-sm text-muted-foreground">
                         {vendor.category?.name || 'No category'} • {vendor.city || 'No location'}
@@ -168,6 +189,14 @@ const AdminDashboard = () => {
                         Applied {formatDistanceToNow(new Date(vendor.created_at), { addSuffix: true })}
                       </p>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openVendorDetails(vendor)}
+                      className="shrink-0"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -243,6 +272,16 @@ const AdminDashboard = () => {
           </Link>
         </div>
       </div>
+
+      {/* Vendor Details Modal */}
+      <VendorDetailsModal
+        vendor={selectedVendor}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        onApprove={() => selectedVendor && handleApprove(selectedVendor.id, selectedVendor.business_name)}
+        onReject={() => selectedVendor && handleReject(selectedVendor.id, selectedVendor.business_name)}
+        isLoading={actionLoading}
+      />
     </div>
   );
 };
