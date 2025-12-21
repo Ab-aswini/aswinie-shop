@@ -312,7 +312,7 @@ export type Database = {
           status: string | null
           udyam_number: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
           whatsapp_number: string
           years_active: number | null
         }
@@ -333,7 +333,7 @@ export type Database = {
           status?: string | null
           udyam_number?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
           whatsapp_number: string
           years_active?: number | null
         }
@@ -354,7 +354,7 @@ export type Database = {
           status?: string | null
           udyam_number?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
           whatsapp_number?: string
           years_active?: number | null
         }
