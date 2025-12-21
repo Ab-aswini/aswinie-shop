@@ -6,13 +6,14 @@ const corsHeaders = {
 };
 
 interface AIRequest {
-  type: 'enhance-image' | 'suggest-description' | 'suggest-category' | 'search-help' | 'rate-help';
+  type: 'enhance-image' | 'suggest-description' | 'suggest-category' | 'search-help' | 'rate-help' | 'enhance-product-image' | 'suggest-product-description';
   imageBase64?: string;
   style?: string;
   businessName?: string;
   category?: string;
   prompt?: string;
   searchQuery?: string;
+  productName?: string;
 }
 
 serve(async (req) => {
@@ -64,6 +65,19 @@ serve(async (req) => {
         maxTokens = 30;
         break;
 
+      case 'enhance-product-image':
+        systemPrompt = `Analyze product images. Return ONLY valid JSON:
+{"productName":"detected name","description":"1 sentence max 20 words","priceRange":{"min":0,"max":0},"category":"category"}`;
+        userPrompt = `Analyze this product image. Extract name, description, estimated price in INR, category. JSON only.`;
+        maxTokens = 150;
+        break;
+
+      case 'suggest-product-description':
+        systemPrompt = `Write short product descriptions. Reply with ONLY 1-2 sentences. Max 25 words. Simple English.`;
+        userPrompt = `Write description for "${body.productName}"${body.category ? ` (${body.category})` : ''}.`;
+        maxTokens = 50;
+        break;
+
       default:
         throw new Error("Invalid request type");
     }
@@ -71,7 +85,7 @@ serve(async (req) => {
     const messages: any[] = [{ role: "system", content: systemPrompt }];
     
     // Handle image content for vision
-    if (body.type === 'enhance-image' && body.imageBase64) {
+    if ((body.type === 'enhance-image' || body.type === 'enhance-product-image') && body.imageBase64) {
       messages.push({
         role: "user",
         content: [
@@ -118,6 +132,21 @@ serve(async (req) => {
     const aiResponse = data.choices?.[0]?.message?.content?.trim() || "";
     
     console.log(`AI response: ${aiResponse.substring(0, 100)}...`);
+
+    // For product image enhancement, try to parse JSON response
+    if (body.type === 'enhance-product-image') {
+      try {
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const productInfo = JSON.parse(jsonMatch[0]);
+          return new Response(JSON.stringify({ success: true, productInfo, type: body.type }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } catch {
+        // Fall through to regular response
+      }
+    }
 
     return new Response(JSON.stringify({ success: true, response: aiResponse, type: body.type }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

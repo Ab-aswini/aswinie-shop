@@ -19,6 +19,7 @@ import AuthPage from "./pages/AuthPage";
 import VendorDashboard from "./pages/VendorDashboard";
 import VendorRegisterPage from "./pages/VendorRegisterPage";
 import AIStudioPage from "./pages/AIStudioPage";
+import ProductCreatePage from "./pages/ProductCreatePage";
 
 // Admin Pages
 import AdminDashboard from "./pages/AdminDashboard";
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/vendor/register" element={<VendorRegisterPage />} />
             <Route path="/vendor/dashboard" element={<VendorDashboard />} />
             <Route path="/vendor/ai-studio" element={<AIStudioPage />} />
+            <Route path="/vendor/product/new" element={<ProductCreatePage />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />
