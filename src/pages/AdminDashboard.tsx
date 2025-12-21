@@ -13,7 +13,8 @@ import {
   ArrowLeft,
   Loader2,
   RefreshCw,
-  Eye
+  Eye,
+  LogOut
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,7 +27,7 @@ import { VendorDetailsModal } from "@/components/admin/VendorDetailsModal";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading, isAdmin } = useAuth();
+  const { user, loading: authLoading, isAdmin, signOut } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -271,6 +272,23 @@ const AdminDashboard = () => {
             <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </Link>
         </div>
+
+        {/* Logout Button */}
+        <button 
+          onClick={async () => {
+            try {
+              await signOut();
+              toast({ title: "Logged out", description: "See you soon!" });
+              navigate("/");
+            } catch (error: any) {
+              toast({ title: "Error", description: error.message, variant: "destructive" });
+            }
+          }}
+          className="flex items-center gap-3 w-full p-4 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="font-medium">Log Out</span>
+        </button>
       </div>
 
       {/* Vendor Details Modal */}
